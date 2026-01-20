@@ -1,6 +1,9 @@
+import Memo from './pages/Memo';
+
 import { useEffect } from 'react';
 import { Router, Route, useRouter } from './router/Router';
 import BottomTab from './components/BottomTab';
+import FloatingButton from './components/FloatingButton';
 
 import Login from './pages/Login';
 import Calendar from './pages/Calendar';
@@ -22,13 +25,11 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const authed = localStorage.getItem(AUTH_KEY) === '1';
 
-    // ログインしてないのに /login 以外へ行こうとしたら戻す
     if (!authed && currentPath !== '/login') {
       navigate('/login');
       return;
     }
 
-    // ログイン済みで /login に来たらカレンダーへ
     if (authed && currentPath === '/login') {
       navigate('/calendar');
     }
@@ -41,7 +42,6 @@ function AppInner() {
   const { currentPath } = useRouter();
   const authed = localStorage.getItem(AUTH_KEY) === '1';
 
-  // ログイン画面とフォーム系はタブ不要
   const hideBottomTab =
     currentPath === '/login' ||
     currentPath === '/admin/companies/new' ||
@@ -54,7 +54,7 @@ function AppInner() {
         <Login />
       </Route>
 
-      {/* ログイン後だけ */}
+      {/* ログイン後 */}
       <RequireAuth>
         <Route path="/calendar">
           <Calendar />
@@ -63,14 +63,14 @@ function AppInner() {
         <Route path="/companies">
           <Companies />
         </Route>
-        
+
         <Route path="/companies/detail-search">
           <CompanyDetailSearch />
         </Route>
 
         <Route path="/companies/detail">
-  <CompanyDetail />
-</Route>
+          <CompanyDetail />
+        </Route>
 
         <Route path="/magazine">
           <Magazine />
@@ -87,10 +87,16 @@ function AppInner() {
         <Route path="/magazine/new">
           <MagazineNew />
         </Route>
+
+        <Route path="/memo">
+          <Memo />
+        </Route>
+
       </RequireAuth>
 
       {/* ログイン後のみ表示 */}
       {authed && !hideBottomTab && <BottomTab />}
+      {authed && !hideBottomTab && <FloatingButton />}
     </div>
   );
 }

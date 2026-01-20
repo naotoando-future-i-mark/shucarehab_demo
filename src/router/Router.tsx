@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 
 interface RouterContextType {
   currentPath: string;
@@ -7,33 +7,48 @@ interface RouterContextType {
 
 const RouterContext = createContext<RouterContextType | null>(null);
 
-const getInitialPath = () => {
-  const p = window.location.pathname;
+function normalizePath(path: string) {
+  if (!path) return '/';
+  // query/hashを除外
+  const p = path.split('?')[0].split('#')[0];
+  // 末尾スラッシュ削除（/memo/ → /memo）
+  const cleaned = p.length > 1 ? p.replace(/\/+$/, '') : p;
+  return cleaned || '/';
+}
+
+function getInitialPath() {
+  const p = normalizePath(window.location.pathname);
   if (!p || p === '/') return '/login';
   return p;
-};
+}
 
 export function Router({ children }: { children: ReactNode }) {
-  const [currentPath, setCurrentPath] = useState(getInitialPath());
+  const [currentPath, setCurrentPath] = useState<string>(() => getInitialPath());
 
-  const navigate = useCallback((path: string) => {
-    window.history.pushState({}, '', path);
-    setCurrentPath(path);
+  useEffect(() => {
+    const onPopState = () => {
+      setCurrentPath(normalizePath(window.location.pathname));
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  return (
-    <RouterContext.Provider value={{ currentPath, navigate }}>
-      {children}
-    </RouterContext.Provider>
-  );
+  const navigate = useCallback((path: string) => {
+    const next = normalizePath(path);
+    if (next === currentPath) return;
+    window.history.pushState({}, '', next);
+    setCurrentPath(next);
+  }, [currentPath]);
+
+  const value = useMemo(() => ({ currentPath, navigate }), [currentPath, navigate]);
+
+  return <RouterContext.Provider value={value}>{children}</RouterContext.Provider>;
 }
 
 export function useRouter() {
-  const context = useContext(RouterContext);
-  if (!context) {
-    throw new Error('useRouter must be used within Router');
-  }
-  return context;
+  const ctx = useContext(RouterContext);
+  if (!ctx) throw new Error('useRouter must be used within Router');
+  return ctx;
 }
 
 interface RouteProps {
@@ -43,5 +58,7 @@ interface RouteProps {
 
 export function Route({ path, children }: RouteProps) {
   const { currentPath } = useRouter();
-  return currentPath === path ? <>{children}</> : null;
+  const a = normalizePath(currentPath);
+  const b = normalizePath(path);
+  return a === b ? <>{children}</> : null;
 }
