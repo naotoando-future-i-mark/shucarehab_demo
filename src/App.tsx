@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Router, Route, useRouter } from './router/Router';
 import BottomTab from './components/BottomTab';
 import FloatingButton from './components/FloatingButton';
+import Header from './components/Header';
 
 import Login from './pages/Login';
 import Calendar from './pages/Calendar';
@@ -12,9 +13,7 @@ import Magazine from './pages/Magazine';
 import Create from './pages/Create';
 import CompanyNew from './pages/CompanyNew';
 import MagazineNew from './pages/MagazineNew';
-
 import CompanyDetailSearch from './pages/CompanyDetailSearch';
-
 import CompanyDetail from './pages/CompanyDetail';
 
 const AUTH_KEY = 'shukarehub_auth';
@@ -95,6 +94,7 @@ function AppInner() {
       </RequireAuth>
 
       {/* ログイン後のみ表示 */}
+      {authed && !hideBottomTab && <Header />}
       {authed && !hideBottomTab && <BottomTab />}
       {authed && !hideBottomTab && <FloatingButton />}
     </div>
