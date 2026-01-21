@@ -12,6 +12,7 @@ import Companies from './pages/Companies';
 import Magazine from './pages/Magazine';
 import Create from './pages/Create';
 import CompanyNew from './pages/CompanyNew';
+import MemoNew from './pages/MemoNew';
 import MagazineNew from './pages/MagazineNew';
 import CompanyDetailSearch from './pages/CompanyDetailSearch';
 import CompanyDetail from './pages/CompanyDetail';
@@ -90,6 +91,11 @@ function AppInner() {
         <Route path="/memo">
           <Memo />
         </Route>
+
+        <Route path="/memo/new">
+          <MemoNew />
+        </Route>
+
 
       </RequireAuth>
 

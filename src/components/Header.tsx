@@ -5,7 +5,6 @@ import { useRouter } from '../router/Router';
 const menuItems = [
   { path: '/calendar', icon: '📅', label: 'カレンダー' },
   { path: '/companies', icon: '🏢', label: '企業を探す' },
-  { path: '/companies/added', icon: '📋', label: '追加した企業' },
   { path: '/magazine', icon: '📰', label: '就活マガジン' },
   { path: '/memo', icon: '📝', label: '就活ノート' },
   { path: '/settings', icon: '⚙️', label: '設定' },

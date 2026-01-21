@@ -35,7 +35,7 @@ export default function FloatingButton() {
                 <span className="text-gray-800">カレンダー作成</span>
               </button>
               <button
-                onClick={() => handleNavigate('/company-new')}
+                onClick={() => handleNavigate('/memo/new')}
                 className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50"
               >
                 <span className="text-xl">📝</span>

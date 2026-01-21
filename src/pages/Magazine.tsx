@@ -38,13 +38,13 @@ const dummyPosts: Post[] = [
       { 
         url: '/images/magazine/sompo.png', 
         tags: [
-          { id: 'tag1', name: 'SOMPOひまわり生命', url: 'https://www.himawari-life.co.jp/recruit/', x: 50, y: 50 }
+          { id: 'tag1', name: 'SOMPOひまわり生命', url: 'https://www.himawari-life.co.jp/recruit/', x: 50, y: 18 }
         ] 
       },
       { 
         url: '/images/magazine/uniqlo.png', 
         tags: [
-          { id: 'tag2', name: 'ユニクロ', url: 'https://www.uniqlo.com/jp/ja/contents/recruit/', x: 50, y: 50 }
+          { id: 'tag2', name: 'ユニクロ', url: 'https://www.uniqlo.com/jp/ja/contents/recruit/', x: 50, y: 18 }
         ] 
       },
     ],
