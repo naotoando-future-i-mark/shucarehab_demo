@@ -1,16 +1,15 @@
-import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 type EventItem = {
   id: number;
-  date: string; // YYYY-MM-DD
-  time: string;
+  date: string;
+  startTime: string;
+  endTime: string;
   title: string;
-  location?: string;
-  colorClass: string; // tailwind class
+  colorClass: string;
 };
 
-const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
 
 function toISODateLocal(d: Date) {
@@ -30,34 +29,51 @@ function isSameYMD(a: Date, b: Date) {
 
 function getMonthGrid(year: number, monthIndex: number) {
   const firstDayOfMonth = new Date(year, monthIndex, 1);
-  const firstWeekday = firstDayOfMonth.getDay(); // 0..6
+  const firstWeekday = firstDayOfMonth.getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  
+  // 前月の日数
+  const prevMonthDays = new Date(year, monthIndex, 0).getDate();
 
-  const cells: Array<{ day: number | null; date?: Date }> = [];
+  const cells: Array<{ day: number; date: Date; isCurrentMonth: boolean }> = [];
 
-  // 前の月の空白
-  for (let i = 0; i < firstWeekday; i++) {
-    cells.push({ day: null });
+  // 前月の日付
+  for (let i = firstWeekday - 1; i >= 0; i--) {
+    const day = prevMonthDays - i;
+    cells.push({ 
+      day, 
+      date: new Date(year, monthIndex - 1, day),
+      isCurrentMonth: false 
+    });
   }
 
   // 当月の日付
   for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({ day: d, date: new Date(year, monthIndex, d) });
+    cells.push({ 
+      day: d, 
+      date: new Date(year, monthIndex, d),
+      isCurrentMonth: true 
+    });
   }
 
-  // 行を揃える（最終週の空白埋め）
-  while (cells.length % 7 !== 0) {
-    cells.push({ day: null });
+  // 次月の日付（6行になるまで）
+  let nextDay = 1;
+  while (cells.length < 42) {
+    cells.push({ 
+      day: nextDay, 
+      date: new Date(year, monthIndex + 1, nextDay),
+      isCurrentMonth: false 
+    });
+    nextDay++;
   }
 
   return cells;
 }
 
 const dummyEvents: EventItem[] = [
-  // 今日に寄せて表示されるように、後で「今日」基準で差し替えたい場合はここを動的生成でもOK
-  { id: 1, date: '2026-01-09', time: '10:00', title: '〇〇株式会社 会社説明会', location: 'オンライン', colorClass: 'bg-blue-500' },
-  { id: 2, date: '2026-01-09', time: '14:00', title: '△△商事 1次面接', location: '東京本社', colorClass: 'bg-purple-500' },
-  { id: 3, date: '2026-01-10', time: '16:30', title: 'ES提出締切', location: '', colorClass: 'bg-orange-500' },
+  { id: 1, date: '2026-01-20', startTime: '15:00', endTime: '16:00', title: 'テスト', colorClass: 'bg-orange-500' },
+  { id: 2, date: '2026-01-09', startTime: '10:00', endTime: '11:30', title: '〇〇株式会社 会社説明会', colorClass: 'bg-blue-500' },
+  { id: 3, date: '2026-01-09', startTime: '14:00', endTime: '15:00', title: '△△商事 1次面接', colorClass: 'bg-purple-500' },
 ];
 
 export default function Calendar() {
@@ -79,9 +95,8 @@ export default function Calendar() {
       list.push(e);
       map.set(e.date, list);
     }
-    // 同日内を時間順に
     for (const [k, v] of map.entries()) {
-      v.sort((a, b) => a.time.localeCompare(b.time));
+      v.sort((a, b) => a.startTime.localeCompare(b.startTime));
       map.set(k, v);
     }
     return map;
@@ -93,135 +108,135 @@ export default function Calendar() {
 
   const goPrevMonth = () => setViewDate((d) => addMonths(d, -1));
   const goNextMonth = () => setViewDate((d) => addMonths(d, 1));
-  const goToday = () => {
-    setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
-    setSelectedDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
-  };
+
+  // 選択日の曜日を取得
+  const selectedDayOfWeek = dayNames[selectedDate.getDay()];
 
   return (
-    <div className="pb-20 bg-gray-50 min-h-screen">
-      {/* ヘッダー（カレンダー） */}
-      <div className="sticky top-0 z-10 bg-white border-b">
-        <div className="max-w-md mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">
-                {year}年 {monthNames[month]}
-              </h1>
-              <button onClick={goToday} className="mt-1 text-xs text-gray-500 hover:text-gray-700">
-                今日へ戻る
-              </button>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={goPrevMonth}
-                className="p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200"
-                aria-label="previous month"
-              >
-                <ChevronLeft size={20} className="text-gray-700" />
-              </button>
-              <button
-                onClick={goNextMonth}
-                className="p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200"
-                aria-label="next month"
-              >
-                <ChevronRight size={20} className="text-gray-700" />
-              </button>
-            </div>
-          </div>
-
-          {/* 曜日 */}
-          <div className="grid grid-cols-7 gap-1 mt-4">
-            {dayNames.map((day, i) => (
-              <div
-                key={day}
-                className={`text-center text-xs font-semibold py-2 ${
-                  i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-600'
-                }`}
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* 日付グリッド */}
-          <div className="grid grid-cols-7 gap-1">
-            {grid.map((cell, idx) => {
-              const d = cell.date;
-              const isToday = d ? isSameYMD(d, today) : false;
-              const isSelected = d ? isSameYMD(d, selectedDate) : false;
-
-              const hasEvents = d ? (eventsByDate.get(toISODateLocal(d))?.length ?? 0) > 0 : false;
-
-              return (
-                <button
-                  key={idx}
-                  disabled={!d}
-                  onClick={() => d && setSelectedDate(d)}
-                  className={[
-                    'aspect-square rounded-xl flex flex-col items-center justify-center text-sm transition',
-                    d ? 'hover:bg-gray-100 active:bg-gray-200' : 'cursor-default',
-                    isSelected ? 'bg-blue-600 text-white font-bold hover:bg-blue-600 active:bg-blue-700' : 'text-gray-800',
-                    !isSelected && isToday ? 'ring-2 ring-blue-200' : '',
-                  ].join(' ')}
-                  aria-label={d ? toISODateLocal(d) : 'empty'}
-                >
-                  <div className="leading-none">{cell.day ?? ''}</div>
-                  {/* 予定ドット */}
-                  {d && !isSelected && hasEvents && (
-                    <div className="mt-1 h-1.5 w-1.5 rounded-full bg-orange-400" />
-                  )}
-                  {d && isSelected && hasEvents && (
-                    <div className="mt-1 h-1.5 w-1.5 rounded-full bg-white/80" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+    <div className="pt-14 pb-20 bg-white min-h-screen max-w-md mx-auto">
+      {/* 月選択ヘッダー */}
+      <div className="px-4 py-3 flex items-center gap-2">
+        <div className="bg-gray-100 rounded-lg px-3 py-1.5 text-sm font-medium">
+          {year}年{month + 1}月
         </div>
+        <button
+          onClick={goPrevMonth}
+          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg"
+        >
+          <ChevronLeft size={18} className="text-gray-600" />
+        </button>
+        <button
+          onClick={goNextMonth}
+          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg"
+        >
+          <ChevronRight size={18} className="text-gray-600" />
+        </button>
       </div>
 
-      {/* 予定リスト */}
-      <div className="max-w-md mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">予定</h2>
-            <div className="text-sm text-gray-500">{selectedISO}</div>
+      {/* 曜日ヘッダー */}
+      <div className="grid grid-cols-7 border-b border-gray-200">
+        {dayNames.map((day, i) => (
+          <div
+            key={day}
+            className={`text-center text-sm py-2 ${
+              i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-600'
+            }`}
+          >
+            {day}
           </div>
-          {/* 将来：ここに「＋追加」ボタン置いても良い */}
+        ))}
+      </div>
+
+      {/* 日付グリッド */}
+      <div className="grid grid-cols-7">
+        {grid.map((cell, idx) => {
+          const isToday = isSameYMD(cell.date, today);
+          const isSelected = isSameYMD(cell.date, selectedDate);
+          const dateISO = toISODateLocal(cell.date);
+          const dayEvents = eventsByDate.get(dateISO) ?? [];
+          const dayOfWeek = cell.date.getDay();
+
+          return (
+            <button
+              key={idx}
+              onClick={() => setSelectedDate(cell.date)}
+              className={`
+                min-h-[72px] border-b border-r border-gray-100 p-1 text-left flex flex-col
+                ${!cell.isCurrentMonth ? 'bg-gray-50' : 'bg-white'}
+              `}
+            >
+              {/* 日付 */}
+              <div className="flex justify-center mb-1">
+                <span
+                  className={`
+                    w-7 h-7 flex items-center justify-center text-sm rounded-full
+                    ${isSelected ? 'bg-orange-500 text-white' : ''}
+                    ${!isSelected && isToday ? 'bg-orange-100 text-orange-600' : ''}
+                    ${!isSelected && !isToday && !cell.isCurrentMonth ? 'text-gray-300' : ''}
+                    ${!isSelected && !isToday && cell.isCurrentMonth && dayOfWeek === 0 ? 'text-red-500' : ''}
+                    ${!isSelected && !isToday && cell.isCurrentMonth && dayOfWeek === 6 ? 'text-blue-500' : ''}
+                    ${!isSelected && !isToday && cell.isCurrentMonth && dayOfWeek !== 0 && dayOfWeek !== 6 ? 'text-gray-800' : ''}
+                  `}
+                >
+                  {cell.day}
+                </span>
+              </div>
+
+              {/* イベント表示 */}
+              {dayEvents.length > 0 && (
+                <div className="flex flex-col gap-0.5 overflow-hidden">
+                  {dayEvents.slice(0, 2).map((event) => (
+                    <div
+                      key={event.id}
+                      className={`text-[10px] text-white px-1 py-0.5 rounded truncate ${event.colorClass}`}
+                    >
+                      {event.title}
+                    </div>
+                  ))}
+                  {dayEvents.length > 2 && (
+                    <div className="text-[10px] text-gray-500 px-1">
+                      +{dayEvents.length - 2}件
+                    </div>
+                  )}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 選択日の予定 */}
+      <div className="bg-gray-50 mt-2">
+        {/* 日付ヘッダー */}
+        <div className="px-4 py-3 bg-gray-100 flex items-center gap-2">
+          <span className="text-sm text-blue-600 font-medium">当日</span>
+          <span className="text-sm text-gray-700">
+            {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日({selectedDayOfWeek})
+          </span>
         </div>
 
-        {selectedEvents.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 text-center">
-            <div className="text-gray-900 font-semibold">この日の予定はまだないよ</div>
-            <div className="text-sm text-gray-500 mt-2">MVPでは、予定の追加は後でOK！</div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {selectedEvents.map((event) => (
-              <div key={event.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <div className="flex gap-3">
-                  <div className={`w-1 ${event.colorClass} rounded-full`} />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock size={16} className="text-gray-400" />
-                      <span className="text-sm font-semibold text-gray-700">{event.time}</span>
-                    </div>
-                    <h3 className="font-semibold text-gray-900">{event.title}</h3>
-
-                    {!!event.location && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <MapPin size={16} className="text-gray-400" />
-                        <span className="text-sm text-gray-600">{event.location}</span>
-                      </div>
-                    )}
+        {/* 予定リスト */}
+        <div className="px-4 py-2">
+          {selectedEvents.length === 0 ? (
+            <div className="py-4 text-center text-gray-400 text-sm">
+              予定はありません
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {selectedEvents.map((event) => (
+                <div key={event.id} className="flex items-start gap-3 py-2">
+                  <div className="text-sm text-gray-500 w-24 flex-shrink-0">
+                    {event.startTime} 〜 {event.endTime}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1 h-4 rounded-full ${event.colorClass}`} />
+                    <span className="text-sm text-gray-800">{event.title}</span>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

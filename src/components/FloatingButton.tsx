@@ -21,34 +21,39 @@ export default function FloatingButton() {
         />
       )}
 
-      {/* メニュー */}
-      {isOpen && (
-        <div className="fixed bottom-24 right-4 z-50 bg-white rounded-lg shadow-lg py-2 min-w-48">
+      {/* コンテナ（スマホ幅に制限） */}
+      <div className="fixed bottom-20 left-0 right-0 z-50 pointer-events-none">
+        <div className="max-w-md mx-auto relative">
+          {/* メニュー */}
+          {isOpen && (
+            <div className="absolute bottom-16 right-4 bg-white rounded-lg shadow-lg py-2 min-w-48 pointer-events-auto">
+              <button
+                onClick={() => handleNavigate('/create')}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50"
+              >
+                <span className="text-xl">📅</span>
+                <span className="text-gray-800">カレンダー作成</span>
+              </button>
+              <button
+                onClick={() => handleNavigate('/company-new')}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50"
+              >
+                <span className="text-xl">📝</span>
+                <span className="text-gray-800">就活ノート作成</span>
+              </button>
+            </div>
+          )}
+
+          {/* フローティングボタン */}
           <button
-            onClick={() => handleNavigate('/create')}
-            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50"
+            onClick={() => setIsOpen(!isOpen)}
+            className="absolute bottom-0 right-4 w-14 h-14 bg-orange-500 hover:bg-orange-600 rounded-full shadow-lg flex items-center justify-center transition-transform pointer-events-auto"
+            style={{ transform: isOpen ? 'rotate(45deg)' : 'rotate(0deg)' }}
           >
-            <span className="text-xl">📅</span>
-            <span className="text-gray-800">カレンダー作成</span>
-          </button>
-          <button
-            onClick={() => handleNavigate('/company-new')}
-            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50"
-          >
-            <span className="text-xl">📝</span>
-            <span className="text-gray-800">就活ノート作成</span>
+            <Plus size={28} className="text-white" strokeWidth={2.5} />
           </button>
         </div>
-      )}
-
-      {/* フローティングボタン */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-20 right-4 z-50 w-14 h-14 bg-orange-500 hover:bg-orange-600 rounded-full shadow-lg flex items-center justify-center transition-transform"
-        style={{ transform: isOpen ? 'rotate(45deg)' : 'rotate(0deg)' }}
-      >
-        <Plus size={28} className="text-white" strokeWidth={2.5} />
-      </button>
+      </div>
     </>
   );
 }

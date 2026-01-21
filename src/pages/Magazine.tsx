@@ -1,99 +1,375 @@
-import { Heart, MessageCircle, Bookmark } from 'lucide-react';
+import { Bookmark, ExternalLink, Grid3X3, List, ChevronLeft, Send } from 'lucide-react';
+import { useState } from 'react';
 
-const dummyPosts = [
+type CompanyTag = {
+  id: string;
+  name: string;
+  url: string;
+  x: number;
+  y: number;
+};
+
+type Post = {
+  id: number;
+  images: {
+    url: string;
+    tags?: CompanyTag[];
+  }[];
+  title: string;
+  description: string;
+  likes: number;
+};
+
+const dummyPosts: Post[] = [
   {
     id: 1,
-    author: '就活太郎',
-    timeAgo: '2時間前',
-    image: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: '面接で聞かれた想定外の質問TOP5',
-    description: '実際の面接で聞かれて困った質問をまとめました。事前準備が大切です！',
+    images: [
+      { url: '/images/magazine/es-basic.png', tags: [] },
+      { url: '/images/magazine/es-howto.png', tags: [] },
+    ],
+    title: '【超基本】いまさら聞けないESの書き方',
+    description: 'ESの基本的な書き方を解説します。',
     likes: 234,
-    comments: 18,
   },
   {
     id: 2,
-    author: 'キャリア花子',
-    timeAgo: '5時間前',
-    image: 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: 'IT業界の内定を3社から獲得した私の戦略',
-    description: '業界研究から面接対策まで、実践したことを全て公開します。',
+    images: [
+      { url: '/images/magazine/weekly3.png', tags: [] },
+      { 
+        url: '/images/magazine/sompo.png', 
+        tags: [
+          { id: 'tag1', name: 'SOMPOひまわり生命', url: 'https://www.himawari-life.co.jp/recruit/', x: 50, y: 50 }
+        ] 
+      },
+      { 
+        url: '/images/magazine/uniqlo.png', 
+        tags: [
+          { id: 'tag2', name: 'ユニクロ', url: 'https://www.uniqlo.com/jp/ja/contents/recruit/', x: 50, y: 50 }
+        ] 
+      },
+    ],
+    title: '【激レア!?】週休3日の穴場企業8選',
+    description: '福利厚生も強い × 年収も高め × 安定して長く働ける企業を紹介。',
     likes: 512,
-    comments: 45,
   },
   {
     id: 3,
-    author: '内定ハンター',
-    timeAgo: '1日前',
-    image: 'https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: 'グループディスカッション攻略法',
-    description: 'GDで評価されるポイントと、実際に使えるテクニックを解説。',
+    images: [
+      { url: '/images/magazine/december.png', tags: [] },
+    ],
+    title: '12月下旬からの就活スケジュール',
+    description: '今からでも間に合う！就活の進め方を解説。',
     likes: 387,
-    comments: 29,
   },
   {
     id: 4,
-    author: 'OB訪問マスター',
-    timeAgo: '2日前',
-    image: 'https://images.pexels.com/photos/3184338/pexels-photo-3184338.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: 'OB訪問で絶対に聞くべき質問リスト',
-    description: '表面的な情報ではなく、本当に知りたい情報を引き出す質問術。',
+    images: [
+      { url: '/images/magazine/interview-ng.png', tags: [] },
+    ],
+    title: '面接で絶対言ってはいけないNGワード',
+    description: '面接官が嫌がるNGワードとは？',
     likes: 421,
-    comments: 34,
   },
 ];
 
-export default function Magazine() {
+// 画像スライダー
+function ImageSlider({ images }: { images: Post['images'] }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showTags, setShowTags] = useState(false);
+
+  const currentImage = images[currentIndex];
+  const hasTags = currentImage.tags && currentImage.tags.length > 0;
+
+  const handleImageClick = () => {
+    if (hasTags) {
+      setShowTags(!showTags);
+    }
+  };
+
+  const goToPrev = () => {
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    setShowTags(false);
+  };
+
+  const goToNext = () => {
+    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : prev));
+    setShowTags(false);
+  };
+
   return (
-    <div className="pb-20 bg-gray-50 min-h-screen">
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-md mx-auto px-4 py-4">
-          <h1 className="text-xl font-bold text-gray-900">就活マガジン</h1>
+    <div className="relative bg-gray-100 aspect-square max-w-md mx-auto">
+      <img
+        src={currentImage.url}
+        alt=""
+        className="w-full h-full object-contain cursor-pointer bg-white"
+        onClick={handleImageClick}
+      />
+
+      {/* 企業タグ */}
+      {showTags && hasTags && currentImage.tags?.map((tag) => (
+        <button
+          key={tag.id}
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(tag.url, '_blank');
+          }}
+          className="absolute bg-black/80 text-white text-sm px-3 py-2 rounded-lg flex items-center gap-2 transform -translate-x-1/2 -translate-y-1/2 hover:bg-black transition-colors"
+          style={{ left: `${tag.x}%`, top: `${tag.y}%` }}
+        >
+          {tag.name}
+          <ExternalLink size={14} />
+        </button>
+      ))}
+
+      {/* タップヒント */}
+      {hasTags && !showTags && (
+        <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
+          タップして企業を見る
         </div>
-      </div>
+      )}
 
-      <div className="max-w-md mx-auto">
-        {dummyPosts.map((post) => (
-          <div key={post.id} className="bg-white mb-4 border-b border-gray-200">
-            <div className="px-4 py-3 flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-                {post.author[0]}
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-gray-900 text-sm">{post.author}</p>
-                <p className="text-xs text-gray-500">{post.timeAgo}</p>
-              </div>
-            </div>
+      {/* 前へボタン */}
+      {images.length > 1 && currentIndex > 0 && (
+        <button
+          onClick={goToPrev}
+          className="absolute left-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center shadow"
+        >
+          <ChevronLeft size={20} />
+        </button>
+      )}
 
-            <div className="relative bg-gray-100 aspect-square">
-              <img
-                src={post.image}
-                alt={post.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
+      {/* 次へボタン */}
+      {images.length > 1 && currentIndex < images.length - 1 && (
+        <button
+          onClick={goToNext}
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center shadow rotate-180"
+        >
+          <ChevronLeft size={20} />
+        </button>
+      )}
 
-            <div className="px-4 py-3">
-              <div className="flex items-center gap-4 mb-3">
-                <button className="flex items-center gap-2 hover:text-red-500 transition-colors">
-                  <Heart size={24} />
-                  <span className="text-sm font-medium">{post.likes}</span>
-                </button>
-                <button className="flex items-center gap-2 hover:text-blue-500 transition-colors">
-                  <MessageCircle size={24} />
-                  <span className="text-sm font-medium">{post.comments}</span>
-                </button>
-                <button className="ml-auto hover:text-blue-500 transition-colors">
-                  <Bookmark size={24} />
-                </button>
-              </div>
+      {/* ドットインジケーター */}
+      {images.length > 1 && (
+        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+          {images.map((_, idx) => (
+            <div
+              key={idx}
+              className={`w-2 h-2 rounded-full ${idx === currentIndex ? 'bg-orange-500' : 'bg-white/60'}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
-              <h3 className="font-bold text-gray-900 mb-1">{post.title}</h3>
-              <p className="text-sm text-gray-600">{post.description}</p>
-            </div>
+// 投稿詳細モーダル
+function PostDetail({ 
+  post, 
+  onClose, 
+  isSaved, 
+  onToggleSave 
+}: { 
+  post: Post; 
+  onClose: () => void; 
+  isSaved: boolean;
+  onToggleSave: () => void;
+}) {
+  // 共有機能
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: post.title,
+          text: post.description,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('共有がキャンセルされました');
+      }
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      alert('リンクをコピーしました');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex justify-center">
+      <div className="w-full max-w-md bg-white overflow-y-auto">
+        {/* ヘッダー */}
+        <div className="sticky top-0 bg-white z-10">
+          <div className="flex items-center p-3">
+            <button onClick={onClose} className="p-1">
+              <ChevronLeft size={24} />
+            </button>
           </div>
-        ))}
+        </div>
+
+        {/* 画像スライダー */}
+        <ImageSlider images={post.images} />
+
+        {/* アクションボタン（画像の下） */}
+        <div className="flex items-center justify-end gap-4 px-4 py-2">
+          <button onClick={handleShare} className="p-1">
+            <Send size={22} className="text-gray-600" />
+          </button>
+          <button onClick={onToggleSave} className="p-1">
+            <Bookmark 
+              size={22} 
+              className={isSaved ? 'text-orange-500 fill-orange-500' : 'text-gray-600'} 
+            />
+          </button>
+        </div>
+
+        {/* 投稿情報 */}
+        <div className="px-4 pb-4">
+          <h2 className="text-lg font-bold text-blue-600 mb-2">{post.title}</h2>
+          <p className="text-gray-600 text-sm">{post.description}</p>
+        </div>
       </div>
     </div>
   );
 }
+
+// グリッドサムネイル
+function GridThumbnail({ post, onClick, isSaved }: { post: Post; onClick: () => void; isSaved: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative aspect-square bg-gray-100 overflow-hidden"
+    >
+      <img
+        src={post.images[0].url}
+        alt={post.title}
+        className="w-full h-full object-cover"
+      />
+      {isSaved && (
+        <div className="absolute top-1 right-1">
+          <Bookmark size={16} className="text-orange-500 fill-orange-500" />
+        </div>
+      )}
+    </button>
+  );
+}
+
+export default function Magazine() {
+  const [activeTab, setActiveTab] = useState<'magazine' | 'saved'>('magazine');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [savedPostIds, setSavedPostIds] = useState<Set<number>>(new Set());
+
+  const toggleSave = (postId: number) => {
+    setSavedPostIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(postId)) {
+        newSet.delete(postId);
+      } else {
+        newSet.add(postId);
+      }
+      return newSet;
+    });
+  };
+
+  const displayPosts = activeTab === 'saved' 
+    ? dummyPosts.filter(post => savedPostIds.has(post.id))
+    : dummyPosts;
+
+  return (
+    <div className="pt-14 pb-20 bg-white min-h-screen max-w-md mx-auto">
+      {/* タブ */}
+      <div className="flex border-b sticky top-14 bg-white z-10">
+        <button
+          onClick={() => setActiveTab('magazine')}
+          className={`flex-1 py-3 text-center text-sm font-medium ${
+            activeTab === 'magazine'
+              ? 'text-orange-500 border-b-2 border-orange-500'
+              : 'text-gray-500'
+          }`}
+        >
+          就活マガジン
+        </button>
+        <button
+          onClick={() => setActiveTab('saved')}
+          className={`flex-1 py-3 text-center text-sm font-medium ${
+            activeTab === 'saved'
+              ? 'text-orange-500 border-b-2 border-orange-500'
+              : 'text-gray-500'
+          }`}
+        >
+          保存済み
+        </button>
+      </div>
+
+      {/* 表示切替 */}
+      {activeTab === 'magazine' && (
+        <div className="flex justify-end p-2 gap-2">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-gray-200' : ''}`}
+          >
+            <Grid3X3 size={20} className="text-gray-600" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded ${viewMode === 'list' ? 'bg-gray-200' : ''}`}
+          >
+            <List size={20} className="text-gray-600" />
+          </button>
+        </div>
+      )}
+
+      {/* コンテンツ */}
+      {activeTab === 'saved' && savedPostIds.size === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <Bookmark size={48} className="mb-4" />
+          <p>保存済みの投稿はありません</p>
+        </div>
+      ) : viewMode === 'grid' || activeTab === 'saved' ? (
+        <div className="grid grid-cols-3 gap-0.5">
+          {displayPosts.map((post) => (
+            <GridThumbnail
+              key={post.id}
+              post={post}
+              onClick={() => setSelectedPost(post)}
+              isSaved={savedPostIds.has(post.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="divide-y">
+          {displayPosts.map((post) => (
+            <div key={post.id} className="bg-white">
+              <ImageSlider images={post.images} />
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-sm flex-1">{post.title}</h3>
+                  <button 
+                    onClick={() => toggleSave(post.id)}
+                    className="p-1"
+                  >
+                    <Bookmark 
+                      size={20} 
+                      className={savedPostIds.has(post.id) ? 'text-orange-500 fill-orange-500' : 'text-gray-400'} 
+                    />
+                  </button>
+                </div>
+                <p className="text-gray-500 text-xs">{post.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 投稿詳細モーダル */}
+      {selectedPost && (
+        <PostDetail
+          post={selectedPost}
+          onClose={() => setSelectedPost(null)}
+          isSaved={savedPostIds.has(selectedPost.id)}
+          onToggleSave={() => toggleSave(selectedPost.id)}
+        />
+      )}
+    </div>
+  );
+}
+
