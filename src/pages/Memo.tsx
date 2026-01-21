@@ -170,7 +170,7 @@ export default function Memo() {
   // 基本情報編集モーダル
   if (isEditingBasicInfo && selectedNote) {
     return (
-      <div className="pt-14 pb-20 bg-white min-h-screen max-w-md mx-auto">
+      <div className="pt-14 pb-32 bg-white min-h-screen max-w-md mx-auto">
         <div className="bg-white border-b">
           <div className="px-4 py-3 flex items-center justify-between">
             <button onClick={() => setIsEditingBasicInfo(false)}>

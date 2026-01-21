@@ -105,7 +105,7 @@ export default function CompanyDetail() {
       </div>
 
       {/* 本文 */}
-      <div className="max-w-md mx-auto px-4 py-5 space-y-4 bg-white">
+      <div className="max-w-md mx-auto px-4 py-5 pb-40 space-y-4 bg-white">
         {tab === 'data' ? (
           <>
             <Accordion title="基本データ" defaultOpen>
