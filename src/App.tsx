@@ -47,6 +47,9 @@ function AppInner() {
     currentPath === '/admin/companies/new' ||
     currentPath === '/magazine/new';
 
+  // FloatingButtonは使わない
+  const showFloatingButton = false;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ログイン */}
@@ -95,14 +98,12 @@ function AppInner() {
         <Route path="/memo/new">
           <MemoNew />
         </Route>
-
-
       </RequireAuth>
 
       {/* ログイン後のみ表示 */}
       {authed && !hideBottomTab && <Header />}
       {authed && !hideBottomTab && <BottomTab />}
-      {authed && !hideBottomTab && <FloatingButton />}
+      {authed && showFloatingButton && <FloatingButton />}
     </div>
   );
 }
