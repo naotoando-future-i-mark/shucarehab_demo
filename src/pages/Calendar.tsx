@@ -284,63 +284,87 @@ export default function Calendar() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEvent = () => {
-    if (!editEvent.title?.trim()) {
-      alert('タイトルを入力してください');
-      return;
+const handleSaveEvent = () => {
+  if (!editEvent.title?.trim()) {
+    alert('タイトルを入力してください');
+    return;
+  }
+
+  const baseId = Date.now().toString();
+  const companyName = editEvent.companyName || '';
+  
+  // メインイベント
+  const mainEvent: EventItem = {
+    id: editingEventId || baseId,
+    title: editEvent.title || '',
+    date: editEvent.date || toISODateLocal(today),
+    startTime: editEvent.startTime || '10:00',
+    endTime: editEvent.endTime || '11:00',
+    color: editEvent.color || '#FFA52F',
+    eventType: editEvent.eventType || 'intern',
+    companyName: companyName,
+    deadlineDate: editEvent.deadlineDate,
+    prepDates: editEvent.prepDates,
+    videoUrl: editEvent.videoUrl,
+    location: editEvent.location,
+    notification: editEvent.notification,
+    repeat: editEvent.repeat,
+    memo: editEvent.memo,
+    isAllDay: editEvent.isAllDay,
+  };
+
+  if (editingEventId) {
+    // 編集モード：メインイベントのみ更新（関連イベントは手動管理）
+    setEvents((prev) =>
+      prev.map((e) => (e.id === editingEventId ? mainEvent : e))
+    );
+  } else {
+    // 新規作成モード
+    const newEvents: EventItem[] = [mainEvent];
+
+    // 締切日イベントを追加
+    if (editEvent.deadlineDate) {
+      const deadlineEvent: EventItem = {
+        id: `${baseId}-deadline`,
+        title: `締切：${editEvent.title}`,
+        date: editEvent.deadlineDate,
+        startTime: '23:59',
+        endTime: '23:59',
+        color: '#ef4444', // 赤
+        eventType: editEvent.eventType || 'intern',
+        companyName: companyName,
+        isAllDay: true,
+        memo: `${editEvent.title}の応募締切日`,
+      };
+      newEvents.push(deadlineEvent);
     }
 
-    if (editingEventId) {
-      // 編集モード
-      setEvents((prev) =>
-        prev.map((e) =>
-          e.id === editingEventId
-            ? {
-                ...e,
-                title: editEvent.title || '',
-                date: editEvent.date || toISODateLocal(today),
-                startTime: editEvent.startTime || '10:00',
-                endTime: editEvent.endTime || '11:00',
-                color: editEvent.color || '#FFA52F',
-                eventType: editEvent.eventType || 'intern',
-                companyName: editEvent.companyName,
-                deadlineDate: editEvent.deadlineDate,
-                prepDates: editEvent.prepDates,
-                videoUrl: editEvent.videoUrl,
-                location: editEvent.location,
-                notification: editEvent.notification,
-                repeat: editEvent.repeat,
-                memo: editEvent.memo,
-                isAllDay: editEvent.isAllDay,
-              }
-            : e
-        )
-      );
-    } else {
-      // 新規作成モード
-      const event: EventItem = {
-        id: Date.now().toString(),
-        title: editEvent.title || '',
-        date: editEvent.date || toISODateLocal(today),
-        startTime: editEvent.startTime || '10:00',
-        endTime: editEvent.endTime || '11:00',
-        color: editEvent.color || '#FFA52F',
-        eventType: editEvent.eventType || 'intern',
-        companyName: editEvent.companyName,
-        deadlineDate: editEvent.deadlineDate,
-        prepDates: editEvent.prepDates,
-        videoUrl: editEvent.videoUrl,
-        location: editEvent.location,
-        notification: editEvent.notification,
-        repeat: editEvent.repeat,
-        memo: editEvent.memo,
-        isAllDay: editEvent.isAllDay,
-      };
-      setEvents((prev) => [...prev, event]);
+    // 選考対策日イベントを追加
+    if (editEvent.prepDates && editEvent.prepDates.length > 0) {
+      editEvent.prepDates.forEach((prepDate, index) => {
+        const prepEvent: EventItem = {
+          id: `${baseId}-prep-${index}`,
+          title: `対策：${editEvent.title}`,
+          date: prepDate,
+          startTime: '09:00',
+          endTime: '10:00',
+          color: '#eab308', // 黄色
+          eventType: editEvent.eventType || 'intern',
+          companyName: companyName,
+          isAllDay: false,
+          memo: `${editEvent.title}の選考対策`,
+        };
+        newEvents.push(prepEvent);
+      });
     }
-    setIsEditModalOpen(false);
-    setEditingEventId(null);
-  };
+
+    setEvents((prev) => [...prev, ...newEvents]);
+  }
+
+  setIsEditModalOpen(false);
+  setEditingEventId(null);
+};
+
 
   const handleDeleteEvent = (id: string) => {
     if (confirm('この予定を削除しますか？')) {
