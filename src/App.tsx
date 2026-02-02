@@ -11,10 +11,7 @@ import Calendar from './pages/Calendar';
 import Companies from './pages/Companies';
 import Magazine from './pages/Magazine';
 import Create from './pages/Create';
-import CompanyNew from './pages/CompanyNew';
 import MemoNew from './pages/MemoNew';
-import MagazineNew from './pages/MagazineNew';
-import CompanyDetailSearch from './pages/CompanyDetailSearch';
 import CompanyDetail from './pages/CompanyDetail';
 
 const AUTH_KEY = 'shukarehub_auth';
@@ -67,10 +64,6 @@ function AppInner() {
           <Companies />
         </Route>
 
-        <Route path="/companies/detail-search">
-          <CompanyDetailSearch />
-        </Route>
-
         <Route path="/companies/detail">
           <CompanyDetail />
         </Route>
@@ -81,14 +74,6 @@ function AppInner() {
 
         <Route path="/create">
           <Create />
-        </Route>
-
-        <Route path="/admin/companies/new">
-          <CompanyNew />
-        </Route>
-
-        <Route path="/magazine/new">
-          <MagazineNew />
         </Route>
 
         <Route path="/memo">
