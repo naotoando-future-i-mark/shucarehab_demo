@@ -381,13 +381,45 @@ const handleSaveEvent = () => {
   });
 };
 
-  const handleDeleteEvent = (id: string) => {
-    if (confirm('この予定を削除しますか？')) {
-      setEvents((prev) => prev.filter((e) => e.id !== id));
-      setIsEditModalOpen(false);
-      setEditingEventId(null);
+const handleDeleteEvent = () => {
+  if (!editingEventId) return;
+  
+  // 関連イベント（締切・対策）を検索
+  const relatedEvents = events.filter(ev => 
+    ev.id.startsWith(`${editingEventId}-deadline`) || 
+    ev.id.startsWith(`${editingEventId}-prep`)
+  );
+  
+  // メインイベントかどうか判定（締切・対策イベントでない場合）
+  const isMainEvent = !editingEventId.includes('-deadline') && !editingEventId.includes('-prep');
+  
+  if (isMainEvent && relatedEvents.length > 0) {
+    // 関連イベントがある場合は確認ダイアログ
+    const relatedNames = relatedEvents.map(ev => ev.title).join('\n・');
+    const confirmMessage = `この予定を削除すると、以下の関連予定も削除されます：\n\n・${relatedNames}\n\n削除しますか？`;
+    
+    if (!confirm(confirmMessage)) {
+      return; // キャンセル
     }
-  };
+    
+    // メインイベントと関連イベントを全て削除
+    setEvents(prev => prev.filter(ev => 
+      ev.id !== editingEventId && 
+      !ev.id.startsWith(`${editingEventId}-deadline`) && 
+      !ev.id.startsWith(`${editingEventId}-prep`)
+    ));
+  } else {
+    // 関連イベントがない、または単体の締切/対策イベントの場合
+    const confirmDelete = confirm('この予定を削除しますか？');
+    if (!confirmDelete) return;
+    
+    setEvents(prev => prev.filter(ev => ev.id !== editingEventId));
+  }
+  
+  setIsEditModalOpen(false);
+  setEditingEventId(null);
+};
+
 
   const addPrepDate = () => {
     setEditEvent((prev) => ({
@@ -744,7 +776,7 @@ const handleSaveEvent = () => {
               {/* 編集モードの場合のみ削除ボタンを表示 */}
               {editingEventId && (
                 <button
-                  onClick={() => handleDeleteEvent(editingEventId)}
+                  onClick={() => handleDeleteEvent()}
                   className="w-full py-3 text-red-500 border border-red-300 rounded-lg mt-4"
                 >
                   この予定を削除
