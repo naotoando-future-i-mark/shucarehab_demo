@@ -208,7 +208,7 @@ export const DayEventsSheet = ({
       
       {/* シート */}
       <div
-        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl h-[70vh] flex flex-col transition-transform"
+        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl h-[95vh] flex flex-col transition-transform"
         style={{ transform: currentY ? `translateY(${currentY}px)` : 'translateY(0)' }}
       >
         {/* ヘッダー（ドラッグ可能） */}
