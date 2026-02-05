@@ -131,7 +131,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
   );
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 relative">
+    <div className="h-full flex flex-col bg-gray-50 relative pt-14">
       <div className="bg-white border-b border-gray-200 px-4 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-gray-900">就活ノート</h1>
