@@ -131,16 +131,10 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
   );
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
+    <div className="h-full flex flex-col bg-gray-50 relative">
+      <div className="bg-white border-b border-gray-200 px-4 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-gray-900">就活ノート</h1>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="w-10 h-10 rounded-full bg-[#FFA52F] text-white flex items-center justify-center hover:bg-[#FF8F0F] transition-colors shadow-lg"
-          >
-            <Plus size={24} />
-          </button>
         </div>
 
         <div className="relative">
@@ -208,6 +202,16 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
           ))
         )}
       </div>
+
+      {/* フローティングボタン */}
+      {!showAddModal && (
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="fixed bottom-20 right-4 w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center z-40 bg-gradient-to-r from-[#FFA52F] to-[#FF8C00] hover:shadow-xl transition-shadow"
+        >
+          <Plus size={28} />
+        </button>
+      )}
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">

@@ -22,7 +22,7 @@ export default function BottomTab() {
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
-              className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
+              className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors focus:outline-none ${
                 isActive ? 'text-blue-600' : 'text-gray-500'
               }`}
             >

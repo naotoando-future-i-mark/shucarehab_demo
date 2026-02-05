@@ -302,7 +302,7 @@ export const CalendarGrid = ({
         {weekDays.map((day, index) => (
           <div
             key={day}
-            className={`text-center text-[10px] font-medium py-0.5 px-2 border-b border-gray-200 ${
+            className={`text-center text-[10px] font-medium pb-0.5 px-2 border-b border-gray-200 ${
               index === 0 ? 'text-red-500' : index === 6 ? 'text-blue-500' : 'text-gray-500'
             }`}
           >
