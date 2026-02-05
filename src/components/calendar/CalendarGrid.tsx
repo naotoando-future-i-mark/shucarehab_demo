@@ -291,7 +291,8 @@ export const CalendarGrid = ({
 
   return (
     <div
-      className="bg-white h-full flex flex-col"
+  className="bg-white flex flex-col"
+  style={{ height: 'calc(100vh - 120px)' }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
