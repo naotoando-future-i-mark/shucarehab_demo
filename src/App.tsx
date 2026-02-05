@@ -41,6 +41,10 @@ function AppInner() {
     currentPath === '/login' ||
     currentPath === '/magazine/new';
 
+  const hideHeader =
+  currentPath === '/login' ||
+  currentPath === '/calendar';
+
   // FloatingButtonは使わない
   const showFloatingButton = false;
 
