@@ -226,7 +226,7 @@ export default function Calendar() {
       />
 
       {/* カレンダーグリッド */}
-      <div className="flex-1">
+      <div className="flex-1 min-h-0">
         <CalendarGrid
           currentDate={currentDate}
           selectedDate={selectedDate}
