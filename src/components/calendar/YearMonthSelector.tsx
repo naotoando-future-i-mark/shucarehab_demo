@@ -135,7 +135,7 @@ export const YearMonthSelector = ({ isOpen, onClose, currentDate, onSelectDate }
                 <button
                   key={index}
                   onClick={() => handleMonthSelect(index)}
-                  className={`py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`psy-2.5 rounded-lg text-sm font-medium transition-colors ${
                     currentDate.getMonth() === index && currentDate.getFullYear() === selectedYear
                       ? 'bg-[#FFA52F] text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
