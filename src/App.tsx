@@ -1,5 +1,3 @@
-import Memo from './pages/Memo';
-
 import { useEffect } from 'react';
 import { Router, Route, useRouter } from './router/Router';
 import BottomTab from './components/BottomTab';
@@ -11,7 +9,7 @@ import Calendar from './pages/Calendar';
 import Companies from './pages/Companies';
 import Magazine from './pages/Magazine';
 import Create from './pages/Create';
-import MemoNew from './pages/MemoNew';
+import Notes from './pages/Notes';
 import CompanyDetail from './pages/CompanyDetail';
 
 const AUTH_KEY = 'shukarehub_auth';
@@ -41,7 +39,6 @@ function AppInner() {
 
   const hideBottomTab =
     currentPath === '/login' ||
-    currentPath === '/admin/companies/new' ||
     currentPath === '/magazine/new';
 
   // FloatingButtonは使わない
@@ -76,12 +73,8 @@ function AppInner() {
           <Create />
         </Route>
 
-        <Route path="/memo">
-          <Memo />
-        </Route>
-
-        <Route path="/memo/new">
-          <MemoNew />
+        <Route path="/notes">
+          <Notes />
         </Route>
       </RequireAuth>
 

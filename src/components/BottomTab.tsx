@@ -5,7 +5,7 @@ const tabs = [
   { path: '/calendar', icon: Calendar, label: 'カレンダー' },
   { path: '/companies', icon: Building2, label: '企業検索' },
   { path: '/magazine', icon: BookOpen, label: '就活マガジン' },
-  { path: '/memo', icon: FileText, label: '就活メモ' },
+  { path: '/notes', icon: FileText, label: '就活ノート' },
 ];
 
 export default function BottomTab() {
