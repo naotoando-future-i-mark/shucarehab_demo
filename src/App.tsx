@@ -83,7 +83,7 @@ function AppInner() {
       </RequireAuth>
 
       {/* ログイン後のみ表示 */}
-      {authed && !hideBottomTab && <Header />}
+      {authed && !hideHeader && <Header />}
       {authed && !hideBottomTab && <BottomTab />}
       {authed && showFloatingButton && <FloatingButton />}
     </div>
