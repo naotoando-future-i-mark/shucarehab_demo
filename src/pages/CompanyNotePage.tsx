@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Company, CompanyNote, CompanyMemo, SelectionEvent, SelectionProgress, ReferenceSite } from '../types/company';
 import { MemoTab } from '../components/jobhunting/MemoTab';
 import { SelectionTab } from '../components/jobhunting/SelectionTab';
+import { supabase, getCurrentUserId } from '../lib/supabase';
 
 interface CompanyNotePageProps {
   companyId: string;
@@ -10,13 +11,6 @@ interface CompanyNotePageProps {
 }
 
 type TabType = 'memo' | 'selection';
-
-const COMPANIES_STORAGE_KEY = 'shukarehub_companies';
-const COMPANY_NOTES_STORAGE_KEY = 'shukarehub_company_notes';
-const COMPANY_MEMOS_STORAGE_KEY = 'shukarehub_company_memos';
-const SELECTION_EVENTS_STORAGE_KEY = 'shukarehub_selection_events';
-const SELECTION_PROGRESS_STORAGE_KEY = 'shukarehub_selection_progress';
-const REFERENCE_SITES_STORAGE_KEY = 'shukarehub_reference_sites';
 
 export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => {
   const [company, setCompany] = useState<Company | null>(null);
@@ -26,193 +20,266 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
   const [selectionProgress, setSelectionProgress] = useState<SelectionProgress[]>([]);
   const [referenceSites, setReferenceSites] = useState<ReferenceSite[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('memo');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchCompanyData();
   }, [companyId]);
 
-  const fetchCompanyData = () => {
-    const savedCompanies = localStorage.getItem(COMPANIES_STORAGE_KEY);
-    const companiesData: Company[] = savedCompanies ? JSON.parse(savedCompanies) : [];
-    const foundCompany = companiesData.find(c => c.id === companyId);
-    if (foundCompany) setCompany(foundCompany);
+  const fetchCompanyData = async () => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
 
-    const savedNotes = localStorage.getItem(COMPANY_NOTES_STORAGE_KEY);
-    const notesData = savedNotes ? JSON.parse(savedNotes) : [];
-    let foundNote = notesData.find((n: CompanyNote) => n.company_id === companyId);
+      const { data: companyData, error: companyError } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', companyId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    if (!foundNote) {
-      const now = new Date().toISOString();
-      foundNote = {
-        id: crypto.randomUUID(),
-        company_id: companyId,
-        industry: '',
-        job_type: '',
-        location: '',
-        employee_count: '',
-        listing_status: '',
-        base_salary: '',
-        web_test: '',
-        working_hours: '',
-        mypage_url: '',
-        login_id: '',
-        password: '',
-        login_notes: '',
-        custom_fields: [],
-        free_memo: '',
-        created_at: now,
-        updated_at: now,
-      };
-      notesData.push(foundNote);
-      localStorage.setItem(COMPANY_NOTES_STORAGE_KEY, JSON.stringify(notesData));
+      if (companyError) throw companyError;
+      if (companyData) setCompany(companyData);
+
+      let { data: noteData, error: noteError } = await supabase
+        .from('company_notes')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (noteError && noteError.code !== 'PGRST116') throw noteError;
+
+      if (!noteData) {
+        const { data: newNote, error: insertError } = await supabase
+          .from('company_notes')
+          .insert([{
+            user_id: userId,
+            company_id: companyId,
+            industry: '',
+            job_type: '',
+            location: '',
+            employee_count: '',
+            listing_status: '',
+            base_salary: '',
+            web_test: '',
+            working_hours: '',
+            mypage_url: '',
+            login_id: '',
+            password: '',
+            login_notes: '',
+            custom_fields: [],
+            free_memo: '',
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        noteData = newNote;
+      }
+
+      setCompanyNote(noteData);
+
+      const [memosResult, eventsResult, progressResult, sitesResult] = await Promise.all([
+        supabase.from('company_memos').select('*').eq('company_note_id', noteData.id).order('created_at', { ascending: false }),
+        supabase.from('selection_events').select('*').eq('company_note_id', noteData.id).order('date', { ascending: true }),
+        supabase.from('selection_progress').select('*').eq('company_note_id', noteData.id).order('created_at', { ascending: false }),
+        supabase.from('reference_sites').select('*').eq('company_id', companyId).eq('user_id', userId).order('created_at', { ascending: false }),
+      ]);
+
+      if (memosResult.data) setCompanyMemos(memosResult.data);
+      if (eventsResult.data) setSelectionEvents(eventsResult.data);
+      if (progressResult.data) setSelectionProgress(progressResult.data);
+      if (sitesResult.data) setReferenceSites(sitesResult.data);
+    } catch (error) {
+      console.error('Error fetching company data:', error);
+    } finally {
+      setLoading(false);
     }
-    setCompanyNote(foundNote);
-
-    const savedMemos = localStorage.getItem(COMPANY_MEMOS_STORAGE_KEY);
-    const memosData: CompanyMemo[] = savedMemos ? JSON.parse(savedMemos) : [];
-    setCompanyMemos(memosData.filter(m => m.company_note_id === foundNote.id));
-
-    const savedEvents = localStorage.getItem(SELECTION_EVENTS_STORAGE_KEY);
-    const eventsData: SelectionEvent[] = savedEvents ? JSON.parse(savedEvents) : [];
-    setSelectionEvents(eventsData.filter(e => e.company_note_id === foundNote.id));
-
-    const savedProgress = localStorage.getItem(SELECTION_PROGRESS_STORAGE_KEY);
-    const progressData: SelectionProgress[] = savedProgress ? JSON.parse(savedProgress) : [];
-    setSelectionProgress(progressData.filter(p => p.company_note_id === foundNote.id));
-
-    const savedSites = localStorage.getItem(REFERENCE_SITES_STORAGE_KEY);
-    const sitesData: ReferenceSite[] = savedSites ? JSON.parse(savedSites) : [];
-    setReferenceSites(sitesData.filter(s => s.company_id === companyId));
   };
 
-  const handleUpdateNote = (updates: Partial<CompanyNote>) => {
+  const handleUpdateNote = async (updates: Partial<CompanyNote>) => {
     if (!companyNote) return;
-    const updatedNote = { ...companyNote, ...updates, updated_at: new Date().toISOString() };
-    setCompanyNote(updatedNote);
 
-    const savedNotes = localStorage.getItem(COMPANY_NOTES_STORAGE_KEY);
-    const notesData = savedNotes ? JSON.parse(savedNotes) : [];
-    const index = notesData.findIndex((n: CompanyNote) => n.id === companyNote.id);
-    if (index !== -1) {
-      notesData[index] = updatedNote;
-      localStorage.setItem(COMPANY_NOTES_STORAGE_KEY, JSON.stringify(notesData));
+    try {
+      const { error } = await supabase
+        .from('company_notes')
+        .update(updates)
+        .eq('id', companyNote.id);
+
+      if (error) throw error;
+
+      const updatedNote = { ...companyNote, ...updates };
+      setCompanyNote(updatedNote);
+    } catch (error) {
+      console.error('Error updating note:', error);
+      alert('更新に失敗しました');
     }
   };
 
-  const handleAddMemo = (memo: Omit<CompanyMemo, 'id' | 'created_at' | 'updated_at'>) => {
-    const now = new Date().toISOString();
-    const newMemo: CompanyMemo = {
-      ...memo,
-      id: crypto.randomUUID(),
-      created_at: now,
-      updated_at: now,
-    };
+  const handleAddMemo = async (memo: Omit<CompanyMemo, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('company_memos')
+        .insert([memo])
+        .select()
+        .single();
 
-    const savedMemos = localStorage.getItem(COMPANY_MEMOS_STORAGE_KEY);
-    const memosData: CompanyMemo[] = savedMemos ? JSON.parse(savedMemos) : [];
-    memosData.push(newMemo);
-    localStorage.setItem(COMPANY_MEMOS_STORAGE_KEY, JSON.stringify(memosData));
-    setCompanyMemos([newMemo, ...companyMemos]);
-  };
+      if (error) throw error;
 
-  const handleUpdateMemo = (memoId: string, updates: Partial<CompanyMemo>) => {
-    const savedMemos = localStorage.getItem(COMPANY_MEMOS_STORAGE_KEY);
-    const memosData: CompanyMemo[] = savedMemos ? JSON.parse(savedMemos) : [];
-    const index = memosData.findIndex(m => m.id === memoId);
-    if (index !== -1) {
-      memosData[index] = { ...memosData[index], ...updates, updated_at: new Date().toISOString() };
-      localStorage.setItem(COMPANY_MEMOS_STORAGE_KEY, JSON.stringify(memosData));
-      setCompanyMemos(companyMemos.map(m => m.id === memoId ? memosData[index] : m));
+      if (data) {
+        setCompanyMemos([data, ...companyMemos]);
+      }
+    } catch (error) {
+      console.error('Error adding memo:', error);
+      alert('メモの追加に失敗しました');
     }
   };
 
-  const handleAddEvent = (event: Omit<SelectionEvent, 'id' | 'created_at' | 'updated_at'>): string | null => {
-    const now = new Date().toISOString();
-    const newEvent: SelectionEvent = {
-      ...event,
-      id: crypto.randomUUID(),
-      created_at: now,
-      updated_at: now,
-    };
+  const handleUpdateMemo = async (memoId: string, updates: Partial<CompanyMemo>) => {
+    try {
+      const { error } = await supabase
+        .from('company_memos')
+        .update(updates)
+        .eq('id', memoId);
 
-    const savedEvents = localStorage.getItem(SELECTION_EVENTS_STORAGE_KEY);
-    const eventsData: SelectionEvent[] = savedEvents ? JSON.parse(savedEvents) : [];
-    eventsData.push(newEvent);
-    localStorage.setItem(SELECTION_EVENTS_STORAGE_KEY, JSON.stringify(eventsData));
-    setSelectionEvents([...selectionEvents, newEvent]);
-    return newEvent.id;
-  };
+      if (error) throw error;
 
-  const handleUpdateEvent = (eventId: string, updates: Partial<SelectionEvent>) => {
-    const savedEvents = localStorage.getItem(SELECTION_EVENTS_STORAGE_KEY);
-    const eventsData: SelectionEvent[] = savedEvents ? JSON.parse(savedEvents) : [];
-    const index = eventsData.findIndex(e => e.id === eventId);
-    if (index !== -1) {
-      eventsData[index] = { ...eventsData[index], ...updates, updated_at: new Date().toISOString() };
-      localStorage.setItem(SELECTION_EVENTS_STORAGE_KEY, JSON.stringify(eventsData));
-      setSelectionEvents(selectionEvents.map(e => e.id === eventId ? eventsData[index] : e));
+      setCompanyMemos(companyMemos.map(m => m.id === memoId ? { ...m, ...updates } : m));
+    } catch (error) {
+      console.error('Error updating memo:', error);
+      alert('メモの更新に失敗しました');
     }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
-    const savedEvents = localStorage.getItem(SELECTION_EVENTS_STORAGE_KEY);
-    const eventsData: SelectionEvent[] = savedEvents ? JSON.parse(savedEvents) : [];
-    const filtered = eventsData.filter(e => e.id !== eventId);
-    localStorage.setItem(SELECTION_EVENTS_STORAGE_KEY, JSON.stringify(filtered));
-    setSelectionEvents(selectionEvents.filter(e => e.id !== eventId));
+  const handleAddEvent = async (event: Omit<SelectionEvent, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('selection_events')
+        .insert([event])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setSelectionEvents([...selectionEvents, data]);
+        return data.id;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error adding event:', error);
+      alert('イベントの追加に失敗しました');
+      return null;
+    }
   };
 
-  const handleAddProgress = (progress: Omit<SelectionProgress, 'id' | 'created_at' | 'updated_at'>) => {
-    const now = new Date().toISOString();
-    const newProgress: SelectionProgress = {
-      ...progress,
-      id: crypto.randomUUID(),
-      created_at: now,
-      updated_at: now,
-    };
+  const handleUpdateEvent = async (eventId: string, updates: Partial<SelectionEvent>) => {
+    try {
+      const { error } = await supabase
+        .from('selection_events')
+        .update(updates)
+        .eq('id', eventId);
 
-    const savedProgress = localStorage.getItem(SELECTION_PROGRESS_STORAGE_KEY);
-    const progressData: SelectionProgress[] = savedProgress ? JSON.parse(savedProgress) : [];
-    progressData.push(newProgress);
-    localStorage.setItem(SELECTION_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));
-    setSelectionProgress([newProgress, ...selectionProgress]);
+      if (error) throw error;
+
+      setSelectionEvents(selectionEvents.map(e => e.id === eventId ? { ...e, ...updates } : e));
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert('イベントの更新に失敗しました');
+    }
   };
 
-  const handleDeleteProgress = (progressId: string) => {
-    const savedProgress = localStorage.getItem(SELECTION_PROGRESS_STORAGE_KEY);
-    const progressData: SelectionProgress[] = savedProgress ? JSON.parse(savedProgress) : [];
-    const filtered = progressData.filter(p => p.id !== progressId);
-    localStorage.setItem(SELECTION_PROGRESS_STORAGE_KEY, JSON.stringify(filtered));
-    setSelectionProgress(selectionProgress.filter(p => p.id !== progressId));
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      const { error } = await supabase
+        .from('selection_events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      setSelectionEvents(selectionEvents.filter(e => e.id !== eventId));
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('イベントの削除に失敗しました');
+    }
   };
 
-  const handleAddSite = (name: string, url: string) => {
-    const now = new Date().toISOString();
-    const newSite: ReferenceSite = {
-      id: crypto.randomUUID(),
-      company_id: companyId,
-      name,
-      url,
-      created_at: now,
-      updated_at: now,
-    };
+  const handleAddProgress = async (progress: Omit<SelectionProgress, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('selection_progress')
+        .insert([progress])
+        .select()
+        .single();
 
-    const savedSites = localStorage.getItem(REFERENCE_SITES_STORAGE_KEY);
-    const sitesData: ReferenceSite[] = savedSites ? JSON.parse(savedSites) : [];
-    sitesData.push(newSite);
-    localStorage.setItem(REFERENCE_SITES_STORAGE_KEY, JSON.stringify(sitesData));
-    setReferenceSites([newSite, ...referenceSites]);
+      if (error) throw error;
+
+      if (data) {
+        setSelectionProgress([data, ...selectionProgress]);
+      }
+    } catch (error) {
+      console.error('Error adding progress:', error);
+      alert('進捗の追加に失敗しました');
+    }
   };
 
-  const handleDeleteSite = (siteId: string) => {
-    const savedSites = localStorage.getItem(REFERENCE_SITES_STORAGE_KEY);
-    const sitesData: ReferenceSite[] = savedSites ? JSON.parse(savedSites) : [];
-    const filtered = sitesData.filter(s => s.id !== siteId);
-    localStorage.setItem(REFERENCE_SITES_STORAGE_KEY, JSON.stringify(filtered));
-    setReferenceSites(referenceSites.filter(s => s.id !== siteId));
+  const handleDeleteProgress = async (progressId: string) => {
+    try {
+      const { error } = await supabase
+        .from('selection_progress')
+        .delete()
+        .eq('id', progressId);
+
+      if (error) throw error;
+
+      setSelectionProgress(selectionProgress.filter(p => p.id !== progressId));
+    } catch (error) {
+      console.error('Error deleting progress:', error);
+      alert('進捗の削除に失敗しました');
+    }
   };
 
-  if (!company || !companyNote) {
+  const handleAddSite = async (name: string, url: string) => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
+
+      const { data, error } = await supabase
+        .from('reference_sites')
+        .insert([{ user_id: userId, company_id: companyId, name, url }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setReferenceSites([data, ...referenceSites]);
+      }
+    } catch (error) {
+      console.error('Error adding site:', error);
+      alert('サイトの追加に失敗しました');
+    }
+  };
+
+  const handleDeleteSite = async (siteId: string) => {
+    try {
+      const { error } = await supabase
+        .from('reference_sites')
+        .delete()
+        .eq('id', siteId);
+
+      if (error) throw error;
+
+      setReferenceSites(referenceSites.filter(s => s.id !== siteId));
+    } catch (error) {
+      console.error('Error deleting site:', error);
+      alert('サイトの削除に失敗しました');
+    }
+  };
+
+  if (loading || !company || !companyNote) {
     return <div className="h-full flex items-center justify-center text-gray-400">読み込み中...</div>;
   }
 

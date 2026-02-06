@@ -1,5 +1,6 @@
 import { Bookmark, ExternalLink, Grid3X3, List, ChevronLeft, Send } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase, getCurrentUserId } from '../lib/supabase';
 
 type CompanyTag = {
   id: string;
@@ -10,7 +11,7 @@ type CompanyTag = {
 };
 
 type Post = {
-  id: number;
+  id: string;
   images: {
     url: string;
     tags?: CompanyTag[];
@@ -22,7 +23,7 @@ type Post = {
 
 const dummyPosts: Post[] = [
   {
-    id: 1,
+    id: '1',
     images: [
       { url: '/images/magazine/es-basic.png', tags: [] },
       { url: '/images/magazine/es-howto.png', tags: [] },
@@ -32,20 +33,20 @@ const dummyPosts: Post[] = [
     likes: 234,
   },
   {
-    id: 2,
+    id: '2',
     images: [
       { url: '/images/magazine/weekly3.png', tags: [] },
-      { 
-        url: '/images/magazine/sompo.png', 
+      {
+        url: '/images/magazine/sompo.png',
         tags: [
           { id: 'tag1', name: 'SOMPOひまわり生命', url: 'https://www.himawari-life.co.jp/recruit/', x: 50, y: 18 }
-        ] 
+        ]
       },
-      { 
-        url: '/images/magazine/uniqlo.png', 
+      {
+        url: '/images/magazine/uniqlo.png',
         tags: [
           { id: 'tag2', name: 'ユニクロ', url: 'https://www.uniqlo.com/jp/ja/contents/recruit/', x: 50, y: 18 }
-        ] 
+        ]
       },
     ],
     title: '【激レア!?】週休3日の穴場企業8選',
@@ -53,7 +54,7 @@ const dummyPosts: Post[] = [
     likes: 512,
   },
   {
-    id: 3,
+    id: '3',
     images: [
       { url: '/images/magazine/december.png', tags: [] },
     ],
@@ -62,7 +63,7 @@ const dummyPosts: Post[] = [
     likes: 387,
   },
   {
-    id: 4,
+    id: '4',
     images: [
       { url: '/images/magazine/interview-ng.png', tags: [] },
     ],
@@ -256,23 +257,77 @@ export default function Magazine() {
   const [activeTab, setActiveTab] = useState<'magazine' | 'saved'>('magazine');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [savedPostIds, setSavedPostIds] = useState<Set<number>>(new Set());
+  const [savedPostIds, setSavedPostIds] = useState<Set<string>>(new Set());
+  const [posts, setPosts] = useState<Post[]>(dummyPosts);
+  const [loading, setLoading] = useState(true);
 
-  const toggleSave = (postId: number) => {
-    setSavedPostIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(postId)) {
-        newSet.delete(postId);
-      } else {
-        newSet.add(postId);
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
+
+      const { data: savedData, error: savedError } = await supabase
+        .from('saved_articles')
+        .select('article_id')
+        .eq('user_id', userId);
+
+      if (savedError) throw savedError;
+
+      if (savedData) {
+        setSavedPostIds(new Set(savedData.map(s => s.article_id)));
       }
-      return newSet;
-    });
+
+      setPosts(dummyPosts);
+    } catch (error) {
+      console.error('Error loading magazine data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const displayPosts = activeTab === 'saved' 
-    ? dummyPosts.filter(post => savedPostIds.has(post.id))
-    : dummyPosts;
+  const toggleSave = async (postId: string) => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
+
+      const isSaved = savedPostIds.has(postId);
+
+      if (isSaved) {
+        const { error } = await supabase
+          .from('saved_articles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('article_id', postId);
+
+        if (error) throw error;
+
+        setSavedPostIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(postId);
+          return newSet;
+        });
+      } else {
+        const { error } = await supabase
+          .from('saved_articles')
+          .insert([{ user_id: userId, article_id: postId }]);
+
+        if (error) throw error;
+
+        setSavedPostIds(prev => new Set(prev).add(postId));
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      alert('保存の更新に失敗しました');
+    }
+  };
+
+  const displayPosts = activeTab === 'saved'
+    ? posts.filter(post => savedPostIds.has(post.id))
+    : posts;
 
   return (
     <div className="pt-14 pb-20 bg-white min-h-screen max-w-md mx-auto">

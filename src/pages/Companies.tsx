@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, ArrowLeft, Calendar, MapPin, Clock, Briefcase, Building2, Users, AlertTriangle } from 'lucide-react';
 import { useRouter } from '../router/Router';
+import { supabase } from '../lib/supabase';
 
 type Company = {
-  id: number;
+  id: string;
   name: string;
   tag: string;
   deadline: string;
@@ -23,9 +24,8 @@ type Company = {
 };
 
 const dummyCompanies: Company[] = [
-  // 有料プラン企業（上位表示）
   {
-    id: 100,
+    id: '100',
     name: 'アクティアスジャパン株式会社',
     tag: 'インターン',
     deadline: '2025年01月01日(月)',
@@ -44,7 +44,7 @@ const dummyCompanies: Company[] = [
     tags: ['27卒', '上場企業'],
   },
   {
-    id: 101,
+    id: '101',
     name: '株式会社グローバルテック',
     tag: 'インターン',
     deadline: '2025年02月15日(土)',
@@ -64,7 +64,7 @@ const dummyCompanies: Company[] = [
   },
   // 無料枠企業
   {
-    id: 1,
+    id: '1',
     name: 'キャノンマーケティングジャパン株式会社',
     tag: 'インターン',
     deadline: '2025年09月15日(月)',
@@ -75,7 +75,7 @@ const dummyCompanies: Company[] = [
     isPremium: false,
   },
   {
-    id: 2,
+    id: '2',
     name: '株式会社メイテックフィルダーズ',
     tag: 'インターン',
     deadline: '2025年09月28日(日)',
@@ -86,7 +86,7 @@ const dummyCompanies: Company[] = [
     isPremium: false,
   },
   {
-    id: 3,
+    id: '3',
     name: '伊藤忠商事株式会社',
     tag: 'インターン',
     deadline: '2025年09月27日(土)',
@@ -97,7 +97,7 @@ const dummyCompanies: Company[] = [
     isPremium: false,
   },
   {
-    id: 4,
+    id: '4',
     name: 'ソニーグローバルソリューションズ株式会社',
     tag: 'インターン',
     deadline: '2025年09月30日(火)',
@@ -108,7 +108,7 @@ const dummyCompanies: Company[] = [
     isPremium: false,
   },
   {
-    id: 5,
+    id: '5',
     name: '楽天グループ株式会社',
     tag: '本選考',
     deadline: '2025年10月15日(水)',
@@ -119,7 +119,7 @@ const dummyCompanies: Company[] = [
     isPremium: false,
   },
   {
-    id: 6,
+    id: '6',
     name: '株式会社サイバーエージェント',
     tag: 'インターン',
     deadline: '2025年10月20日(月)',
@@ -130,7 +130,7 @@ const dummyCompanies: Company[] = [
     isPremium: false,
   },
   {
-    id: 7,
+    id: '7',
     name: '三菱UFJ銀行',
     tag: '本選考',
     deadline: '2025年11月01日(土)',
@@ -141,7 +141,7 @@ const dummyCompanies: Company[] = [
     isPremium: false,
   },
   {
-    id: 8,
+    id: '8',
     name: 'トヨタ自動車株式会社',
     tag: 'インターン',
     deadline: '2025年10月31日(金)',
@@ -152,7 +152,7 @@ const dummyCompanies: Company[] = [
     isPremium: false,
   },
   {
-    id: 9,
+    id: '9',
     name: '株式会社リクルート',
     tag: '本選考',
     deadline: '2025年11月15日(土)',
@@ -163,7 +163,7 @@ const dummyCompanies: Company[] = [
     isPremium: false,
   },
   {
-    id: 10,
+    id: '10',
     name: 'アクセンチュア株式会社',
     tag: 'インターン',
     deadline: '2025年10月25日(土)',
@@ -184,47 +184,88 @@ export default function Companies() {
   const { navigate } = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDetailSearchOpen, setIsDetailSearchOpen] = useState(false);
-  
-  // 詳細検索フィルター
+  const [companies, setCompanies] = useState<Company[]>(dummyCompanies);
+  const [loading, setLoading] = useState(true);
+
   const [searchTarget, setSearchTarget] = useState('企業');
   const [selectedIndustry, setSelectedIndustry] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState('');
 
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  const loadCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('master_companies')
+        .select('*')
+        .order('is_premium', { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const mappedCompanies: Company[] = data.map(c => ({
+          id: c.id,
+          name: c.name,
+          tag: c.tag || 'インターン',
+          deadline: c.deadline || '',
+          deadlineClosed: c.deadline_closed || false,
+          industry: c.industry || '',
+          location: c.location || '',
+          employees: c.employees || '',
+          isPremium: c.is_premium || false,
+          premiumImage: c.premium_image,
+          isUrgent: c.is_urgent,
+          eventTitle: c.event_title,
+          eventPeriod: c.event_period,
+          eventArea: c.event_area,
+          eventDuration: c.event_duration,
+          position: c.position,
+          tags: c.tags,
+        }));
+        setCompanies(mappedCompanies);
+      } else {
+        setCompanies(dummyCompanies);
+      }
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      setCompanies(dummyCompanies);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sortedCompanies = useMemo(() => {
-    let filtered = [...dummyCompanies];
-    
-    // キーワード検索
+    let filtered = [...companies];
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((c) => c.name.toLowerCase().includes(q));
     }
-    
-    // 業種フィルター
+
     if (selectedIndustry) {
       filtered = filtered.filter((c) => c.industry === selectedIndustry);
     }
-    
-    // 従業員規模フィルター
+
     if (selectedEmployees) {
       filtered = filtered.filter((c) => c.employees === selectedEmployees);
     }
-    
-    // 検索対象フィルター
+
     if (searchTarget === 'インターン') {
       filtered = filtered.filter((c) => c.tag === 'インターン');
     } else if (searchTarget === '求人') {
       filtered = filtered.filter((c) => c.tag === '本選考');
     }
-    
-    // 有料企業を上位に
+
     filtered.sort((a, b) => {
       if (a.isPremium && !b.isPremium) return -1;
       if (!a.isPremium && b.isPremium) return 1;
       return 0;
     });
-    
+
     return filtered;
-  }, [searchQuery, selectedIndustry, selectedEmployees, searchTarget]);
+  }, [companies, searchQuery, selectedIndustry, selectedEmployees, searchTarget]);
 
   const handleCompanyClick = (company: Company) => {
     localStorage.setItem('shukarehub_selected_company', JSON.stringify(company));
