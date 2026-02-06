@@ -81,7 +81,7 @@ export const YearMonthSelector = ({ isOpen, onClose, currentDate, onSelectDate }
 
       {/* モーダル */}
       <div
-        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col animate-slide-up transition-transform"
+        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl h-[80vh] flex flex-col animate-slide-up transition-transform"
         style={{ transform: currentY ? `translateY(${currentY}px)` : 'translateY(0)' }}
       >
         {/* ヘッダー（ドラッグ可能） */}
@@ -129,13 +129,13 @@ export const YearMonthSelector = ({ isOpen, onClose, currentDate, onSelectDate }
 
           {/* 月選択 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">月</label>
-            <div className="grid grid-cols-4 gap-2">
+            <label className="block text-sm font-medium text-gray-700 mb-3">月</label>
+            <div className="grid grid-cols-4 gap-3">
               {months.map((month, index) => (
                 <button
                   key={index}
                   onClick={() => handleMonthSelect(index)}
-                  className={`psy-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`py-4 rounded-xl text-base font-medium transition-colors ${
                     currentDate.getMonth() === index && currentDate.getFullYear() === selectedYear
                       ? 'bg-[#FFA52F] text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
