@@ -241,7 +241,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
               activeTab === 'selection' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            選考管理
+            選考状況
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Clock, Trash2, CheckCircle2 } from 'lucide-react';
 import { SelectionEvent, SelectionProgress } from '../../types/company';
+import { Event } from '../../types/event';
 
 interface SelectionTabProps {
   companyNoteId: string;
@@ -16,6 +17,8 @@ interface SelectionTabProps {
 
 type Track = 'intern' | 'fulltime';
 
+const CALENDAR_STORAGE_KEY = 'shukarehub_events';
+
 export const SelectionTab = ({
   companyNoteId,
   companyName,
@@ -30,6 +33,7 @@ export const SelectionTab = ({
   const [selectedTrack, setSelectedTrack] = useState<Track>('intern');
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showAddProgressModal, setShowAddProgressModal] = useState(false);
+  const [createCalendarEvent, setCreateCalendarEvent] = useState(true);
   const [eventFormData, setEventFormData] = useState({
     title: '',
     event_type: '',
@@ -49,6 +53,50 @@ export const SelectionTab = ({
   const handleAddEvent = () => {
     if (!eventFormData.title.trim()) return;
 
+    let calendarEventId: string | null = null;
+
+    if (createCalendarEvent) {
+      const savedEvents = localStorage.getItem(CALENDAR_STORAGE_KEY);
+      const calendarEvents: Event[] = savedEvents ? JSON.parse(savedEvents) : [];
+
+      let startAt: string;
+      let endAt: string;
+      let allDay = false;
+
+      if (eventFormData.date_type === 'schedule') {
+        if (eventFormData.start_time) {
+          startAt = `${eventFormData.start_date}T${eventFormData.start_time}`;
+          endAt = eventFormData.end_time && eventFormData.end_date
+            ? `${eventFormData.end_date}T${eventFormData.end_time}`
+            : `${eventFormData.start_date}T${eventFormData.start_time}`;
+        } else {
+          startAt = `${eventFormData.start_date}T00:00`;
+          endAt = `${eventFormData.end_date || eventFormData.start_date}T23:59`;
+          allDay = true;
+        }
+      } else {
+        startAt = `${eventFormData.deadline_date}T00:00`;
+        endAt = `${eventFormData.deadline_date}T23:59`;
+        allDay = true;
+      }
+
+      calendarEventId = Date.now().toString();
+      const newCalendarEvent: Event = {
+        id: calendarEventId,
+        title: eventFormData.title,
+        start_at: startAt,
+        end_at: endAt,
+        all_day: allDay,
+        color_id: '1',
+        event_type: selectedTrack,
+        company_name: companyName,
+        memo: eventFormData.memo,
+      };
+
+      calendarEvents.push(newCalendarEvent);
+      localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(calendarEvents));
+    }
+
     onAddEvent({
       company_note_id: companyNoteId,
       track_type: selectedTrack,
@@ -62,6 +110,7 @@ export const SelectionTab = ({
       end_time: eventFormData.end_time,
       status: 'pending',
       memo: eventFormData.memo,
+      calendar_event_id: calendarEventId || undefined,
     });
 
     setEventFormData({
@@ -76,6 +125,19 @@ export const SelectionTab = ({
       memo: '',
     });
     setShowAddEventModal(false);
+  };
+
+  const handleDeleteEventWithCalendar = (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+
+    if (event?.calendar_event_id) {
+      const savedEvents = localStorage.getItem(CALENDAR_STORAGE_KEY);
+      const calendarEvents: Event[] = savedEvents ? JSON.parse(savedEvents) : [];
+      const filteredEvents = calendarEvents.filter(e => e.id !== event.calendar_event_id);
+      localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(filteredEvents));
+    }
+
+    onDeleteEvent(eventId);
   };
 
   const handleAddProgress = () => {
@@ -123,7 +185,7 @@ export const SelectionTab = ({
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-4">
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900">選考状況</h3>
+          <h3 className="font-semibold text-gray-900">通過した選考</h3>
           <button onClick={() => setShowAddProgressModal(true)} className="p-2 hover:bg-gray-100 rounded-lg">
             <Plus size={18} className="text-[#FFA52F]" />
           </button>
@@ -131,7 +193,7 @@ export const SelectionTab = ({
 
         <div className="p-4">
           {currentTrackProgress.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">選考状況を追加してください</p>
+            <p className="text-sm text-gray-400 text-center py-8">通過した選考を追加してください</p>
           ) : (
             <div className="space-y-0">
               {currentTrackProgress.map((prog, index) => {
@@ -182,7 +244,7 @@ export const SelectionTab = ({
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900">選考イベント</h3>
+          <h3 className="font-semibold text-gray-900">次の選考</h3>
           <button onClick={() => setShowAddEventModal(true)} className="p-2 hover:bg-gray-100 rounded-lg">
             <Plus size={18} className="text-[#FFA52F]" />
           </button>
@@ -190,7 +252,7 @@ export const SelectionTab = ({
 
         <div className="p-4">
           {currentTrackEvents.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">選考イベントを追加してください</p>
+            <p className="text-sm text-gray-400 text-center py-8">次の選考を追加してください</p>
           ) : (
             <div className="space-y-3">
               {currentTrackEvents.map((event) => {
@@ -234,7 +296,7 @@ export const SelectionTab = ({
                       </div>
 
                       <button
-                        onClick={() => onDeleteEvent(event.id)}
+                        onClick={() => handleDeleteEventWithCalendar(event.id)}
                         className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 rounded"
                       >
                         <Trash2 size={14} className="text-red-500" />
@@ -349,6 +411,25 @@ export const SelectionTab = ({
                 />
               </div>
 
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">カレンダーを同時作成</p>
+                  <p className="text-xs text-gray-500 mt-0.5">カレンダーページにも自動登録します</p>
+                </div>
+                <button
+                  onClick={() => setCreateCalendarEvent(!createCalendarEvent)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    createCalendarEvent ? 'bg-[#FFA52F]' : 'bg-gray-300'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
+                      createCalendarEvent ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
               <button
                 onClick={handleAddEvent}
                 disabled={!eventFormData.title.trim()}
@@ -365,7 +446,7 @@ export const SelectionTab = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">選考状況を追加</h2>
+              <h2 className="text-xl font-bold text-gray-900">通過した選考を追加</h2>
               <button onClick={() => setShowAddProgressModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
             </div>
 
