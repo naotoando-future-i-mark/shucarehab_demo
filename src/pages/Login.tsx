@@ -1,27 +1,103 @@
 import { useState } from 'react';
 import { useRouter } from '../router/Router';
-
-const AUTH_KEY = 'shukarehub_auth';
+import { supabase } from '../lib/supabase';
 
 export default function Login() {
   const { navigate } = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const onLogin = () => {
+  const onLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      alert('メールアドレスとパスワードを入力してください');
+      setError('メールアドレスとパスワードを入力してください');
       return;
     }
-    // MVPなので一旦 “ログインした扱い” にする（後でSupabase等に差し替えOK）
-    localStorage.setItem(AUTH_KEY, '1');
-    navigate('/calendar'); // ここを最初に見せたいページに変えてOK（/companies とか）
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        navigate('/calendar');
+      }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || 'ログインに失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onSignUp = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError('メールアドレスとパスワードを入力してください');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('パスワードは6文字以上で入力してください');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        alert('アカウント作成が完了しました');
+        navigate('/calendar');
+      }
+    } catch (err: any) {
+      console.error('SignUp error:', err);
+      setError(err.message || 'アカウント作成に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onResetPassword = async () => {
+    if (!email.trim()) {
+      setError('メールアドレスを入力してください');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+      if (error) throw error;
+
+      alert('パスワードリセットメールを送信しました');
+    } catch (err: any) {
+      console.error('Reset password error:', err);
+      setError(err.message || 'パスワードリセットに失敗しました');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-6">
       <div className="w-full max-w-md">
-        {/* ロゴ */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center">
             <span className="text-sm font-bold text-gray-700">hub</span>
@@ -32,9 +108,16 @@ export default function Login() {
           </div>
         </div>
 
-        <h1 className="text-center text-lg font-semibold text-gray-900 mb-8">ログイン</h1>
+        <h1 className="text-center text-lg font-semibold text-gray-900 mb-8">
+          {isSignUp ? '新規会員登録' : 'ログイン'}
+        </h1>
 
-        {/* メール */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
         <div className="mb-4">
           <label className="block text-sm text-gray-700 mb-2">メールアドレス</label>
           <input
@@ -43,10 +126,10 @@ export default function Login() {
             placeholder="メールアドレス"
             type="email"
             className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-200"
+            disabled={loading}
           />
         </div>
 
-        {/* パスワード */}
         <div className="mb-6">
           <label className="block text-sm text-gray-700 mb-2">パスワード</label>
           <input
@@ -55,41 +138,41 @@ export default function Login() {
             placeholder="パスワード"
             type="password"
             className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-200"
+            disabled={loading}
           />
         </div>
 
-        {/* ログインボタン */}
         <button
-          onClick={onLogin}
+          onClick={isSignUp ? onSignUp : onLogin}
+          disabled={loading}
           className="w-full py-3 rounded-xl text-white font-semibold
                      bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500
-                     hover:opacity-95 active:opacity-90 transition"
+                     hover:opacity-95 active:opacity-90 transition disabled:opacity-50"
         >
-          ログイン
+          {loading ? '処理中...' : isSignUp ? 'アカウント作成' : 'ログイン'}
         </button>
 
-        <button
-          onClick={() => alert('MVPでは未対応（あとで追加OK）')}
-          className="w-full text-sm text-blue-600 mt-3"
-        >
-          パスワードを忘れた方はこちら
-        </button>
+        {!isSignUp && (
+          <button
+            onClick={onResetPassword}
+            disabled={loading}
+            className="w-full text-sm text-blue-600 mt-3 disabled:opacity-50"
+          >
+            パスワードを忘れた方はこちら
+          </button>
+        )}
 
-        {/* 新規会員登録 */}
         <button
-          onClick={() => alert('MVPでは未対応（あとで追加OK）')}
+          onClick={() => {
+            setIsSignUp(!isSignUp);
+            setError('');
+          }}
+          disabled={loading}
           className="w-full mt-6 py-3 rounded-xl text-white font-semibold
                      bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500
-                     hover:opacity-95 active:opacity-90 transition"
+                     hover:opacity-95 active:opacity-90 transition disabled:opacity-50"
         >
-          新規会員登録
-        </button>
-
-        <button
-          onClick={() => alert('利用規約：MVPではリンク仮置き')}
-          className="w-full text-sm text-blue-600 mt-3"
-        >
-          利用規約はこちら
+          {isSignUp ? 'ログインに戻る' : '新規会員登録'}
         </button>
       </div>
     </div>

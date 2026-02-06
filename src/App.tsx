@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Router, Route, useRouter } from './router/Router';
 import BottomTab from './components/BottomTab';
 import FloatingButton from './components/FloatingButton';
@@ -11,31 +11,68 @@ import Magazine from './pages/Magazine';
 import Create from './pages/Create';
 import Notes from './pages/Notes';
 import CompanyDetail from './pages/CompanyDetail';
-
-const AUTH_KEY = 'shukarehub_auth';
+import { supabase } from './lib/supabase';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { currentPath, navigate } = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    const authed = localStorage.getItem(AUTH_KEY) === '1';
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthed(!!session);
+      setLoading(false);
 
-    if (!authed && currentPath !== '/login') {
-      navigate('/login');
-      return;
-    }
+      if (!session && currentPath !== '/login') {
+        navigate('/login');
+      }
 
-    if (authed && currentPath === '/login') {
-      navigate('/calendar');
-    }
+      if (session && currentPath === '/login') {
+        navigate('/calendar');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthed(!!session);
+
+      if (!session && currentPath !== '/login') {
+        navigate('/login');
+      }
+
+      if (session && currentPath === '/login') {
+        navigate('/calendar');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [currentPath, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">読み込み中...</div>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }
 
 function AppInner() {
   const { currentPath } = useRouter();
-  const authed = localStorage.getItem(AUTH_KEY) === '1';
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthed(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthed(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const hideBottomTab =
     currentPath === '/login' ||

@@ -1,74 +1,77 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Event } from '../types/event';
-import { ColorPreset, getColorPresets, saveColorPresets } from '../data/colorPresets';
+import { ColorPreset } from '../data/colorPresets';
 import { Header } from '../components/calendar/Header';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import { YearMonthSelector } from '../components/calendar/YearMonthSelector';
 import { DayEventsSheet } from '../components/calendar/DayEventsSheet';
 import { AddEventModal } from '../components/calendar/AddEventModal';
+import { supabase, getCurrentUserId } from '../lib/supabase';
 
-const STORAGE_KEY = 'shukarehub_events';
 const PREFILL_KEY = 'shukarehub_calendar_prefill';
-
-// 初期イベント（新規ユーザー用）
-const initialEvents: Event[] = [
-  {
-    id: '1',
-    title: '会社説明会',
-    start_at: '2026-02-10T15:00',
-    end_at: '2026-02-10T16:00',
-    all_day: false,
-    color_id: '1',
-    event_type: 'intern',
-  },
-  {
-    id: '2',
-    title: '1次面接',
-    start_at: '2026-02-15T10:00',
-    end_at: '2026-02-15T11:30',
-    all_day: false,
-    color_id: '2',
-    event_type: 'fulltime',
-    company_name: '〇〇株式会社',
-  },
-];
 
 export default function Calendar() {
   const today = useMemo(() => new Date(), []);
-  
-  // 状態管理
+
   const [currentDate, setCurrentDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [colorPresets, setColorPresets] = useState<ColorPreset[]>(() => getColorPresets());
-  
-  const [events, setEvents] = useState<Event[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return initialEvents;
-      }
-    }
-    return initialEvents;
-  });
+  const [colorPresets, setColorPresets] = useState<ColorPreset[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // モーダル状態
   const [isYearMonthSelectorOpen, setIsYearMonthSelectorOpen] = useState(false);
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | undefined>(undefined);
 
-  // イベントを localStorage に保存
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-  }, [events]);
+    loadData();
+  }, []);
 
-  // カラープリセットを localStorage に保存
-  useEffect(() => {
-    saveColorPresets(colorPresets);
-  }, [colorPresets]);
+  const loadData = async () => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
+
+      const [eventsResult, presetsResult] = await Promise.all([
+        supabase.from('events').select('*').eq('user_id', userId).order('start_at', { ascending: true }),
+        supabase.from('color_presets').select('*').eq('user_id', userId).order('order_index', { ascending: true }),
+      ]);
+
+      if (eventsResult.data) {
+        setEvents(eventsResult.data);
+      }
+
+      if (presetsResult.data && presetsResult.data.length > 0) {
+        setColorPresets(presetsResult.data);
+      } else {
+        await initializeDefaultColorPresets(userId);
+      }
+    } catch (error) {
+      console.error('Error loading calendar data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initializeDefaultColorPresets = async (userId: string) => {
+    const defaultPresets: Omit<ColorPreset, 'id' | 'created_at' | 'updated_at'>[] = [
+      { user_id: userId, label: 'インターン', color: '#FF6B6B', order_index: 0 },
+      { user_id: userId, label: '本選考', color: '#4ECDC4', order_index: 1 },
+      { user_id: userId, label: '締切', color: '#FFD93D', order_index: 2 },
+      { user_id: userId, label: '対策', color: '#95E1D3', order_index: 3 },
+      { user_id: userId, label: 'その他', color: '#A8DADC', order_index: 4 },
+    ];
+
+    const { data, error } = await supabase.from('color_presets').insert(defaultPresets).select();
+
+    if (error) {
+      console.error('Error initializing color presets:', error);
+    } else if (data) {
+      setColorPresets(data);
+    }
+  };
 
   // プレフィルデータをチェック（企業ページからの遷移）
   useEffect(() => {
@@ -219,31 +222,100 @@ export default function Calendar() {
     setIsAddModalOpen(true);
   };
 
-  const handleSaveEvent = (eventData: Omit<Event, 'id'>) => {
-    const newEvent: Event = {
-      ...eventData,
-      id: Date.now().toString(),
-    };
-    setEvents(prev => [...prev, newEvent]);
+  const handleSaveEvent = async (eventData: Omit<Event, 'id'>) => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
+
+      const { data, error } = await supabase
+        .from('events')
+        .insert([{ ...eventData, user_id: userId }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setEvents(prev => [...prev, data]);
+      }
+    } catch (error) {
+      console.error('Error saving event:', error);
+      alert('イベントの保存に失敗しました');
+    }
   };
 
-  const handleUpdateEvent = (event: Event) => {
-    setEvents(prev => prev.map(e => e.id === event.id ? event : e));
+  const handleUpdateEvent = async (event: Event) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update(event)
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      setEvents(prev => prev.map(e => e.id === event.id ? event : e));
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert('イベントの更新に失敗しました');
+    }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
-    // 関連イベント（締切・対策）も削除
-    setEvents(prev => prev.filter(e => {
-      if (e.id === eventId) return false;
-      // 旧形式の関連イベントも削除
-      if (e.id.startsWith(`${eventId}-deadline`) || e.id.startsWith(`${eventId}-prep`)) return false;
-      return true;
-    }));
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      setEvents(prev => prev.filter(e => {
+        if (e.id === eventId) return false;
+        if (e.id.startsWith(`${eventId}-deadline`) || e.id.startsWith(`${eventId}-prep`)) return false;
+        return true;
+      }));
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('イベントの削除に失敗しました');
+    }
   };
 
-  const handleUpdateColorPresets = (presets: ColorPreset[]) => {
-    setColorPresets(presets);
+  const handleUpdateColorPresets = async (presets: ColorPreset[]) => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
+
+      await supabase.from('color_presets').delete().eq('user_id', userId);
+
+      const presetsWithOrder = presets.map((preset, index) => ({
+        ...preset,
+        order_index: index,
+        user_id: userId,
+      }));
+
+      const { data, error } = await supabase
+        .from('color_presets')
+        .insert(presetsWithOrder)
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        setColorPresets(data);
+      }
+    } catch (error) {
+      console.error('Error updating color presets:', error);
+      alert('カラープリセットの更新に失敗しました');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">読み込み中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-0 pb-16 bg-white min-h-screen max-w-md mx-auto flex flex-col relative">

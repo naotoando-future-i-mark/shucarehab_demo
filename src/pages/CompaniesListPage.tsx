@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Building2, Search, Trash2 } from 'lucide-react';
 import { Company, SelectionProgress } from '../types/company';
+import { supabase, getCurrentUserId } from '../lib/supabase';
 
 interface CompaniesListPageProps {
   onCompanySelect: (companyId: string) => void;
@@ -13,44 +14,76 @@ interface CompanyWithProgress extends Company {
   };
 }
 
-const COMPANIES_STORAGE_KEY = 'shukarehub_companies';
-const COMPANY_NOTES_STORAGE_KEY = 'shukarehub_company_notes';
-const SELECTION_PROGRESS_STORAGE_KEY = 'shukarehub_selection_progress';
-
 export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) => {
   const [companies, setCompanies] = useState<CompanyWithProgress[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchCompanies();
   }, []);
 
-  const fetchCompanies = () => {
-    const savedCompanies = localStorage.getItem(COMPANIES_STORAGE_KEY);
-    const savedProgress = localStorage.getItem(SELECTION_PROGRESS_STORAGE_KEY);
-    const savedNotes = localStorage.getItem(COMPANY_NOTES_STORAGE_KEY);
+  const fetchCompanies = async () => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
 
-    const companiesData: Company[] = savedCompanies ? JSON.parse(savedCompanies) : [];
-    const progressData: SelectionProgress[] = savedProgress ? JSON.parse(savedProgress) : [];
-    const notesData = savedNotes ? JSON.parse(savedNotes) : [];
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false });
 
-    const noteIdToCompanyId = new Map(notesData.map((n: any) => [n.id, n.company_id]));
+      if (companiesError) throw companiesError;
 
-    const companyProgressMap = new Map<string, SelectionProgress>();
-    progressData.forEach(progress => {
-      const companyId = noteIdToCompanyId.get(progress.company_note_id);
-      if (!companyId) return;
-      const existing = companyProgressMap.get(companyId);
-      if (!existing || new Date(progress.created_at) > new Date(existing.created_at)) {
-        companyProgressMap.set(companyId, progress);
+      if (!companiesData || companiesData.length === 0) {
+        setCompanies([]);
+        setLoading(false);
+        return;
       }
-    });
 
-    const companiesWithProgress: CompanyWithProgress[] = companiesData
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-      .map(company => {
+      const { data: notesData, error: notesError } = await supabase
+        .from('company_notes')
+        .select('id, company_id')
+        .eq('user_id', userId);
+
+      if (notesError) throw notesError;
+
+      const noteIds = notesData?.map(n => n.id) || [];
+
+      if (noteIds.length === 0) {
+        const companiesWithProgress: CompanyWithProgress[] = companiesData.map(company => ({
+          ...company,
+          latestProgress: undefined,
+        }));
+        setCompanies(companiesWithProgress);
+        setLoading(false);
+        return;
+      }
+
+      const { data: progressData, error: progressError } = await supabase
+        .from('selection_progress')
+        .select('*')
+        .in('company_note_id', noteIds)
+        .order('created_at', { ascending: false });
+
+      if (progressError) throw progressError;
+
+      const noteIdToCompanyId = new Map(notesData?.map(n => [n.id, n.company_id]) || []);
+
+      const companyProgressMap = new Map<string, SelectionProgress>();
+      progressData?.forEach(progress => {
+        const companyId = noteIdToCompanyId.get(progress.company_note_id);
+        if (!companyId) return;
+        const existing = companyProgressMap.get(companyId);
+        if (!existing || new Date(progress.created_at) > new Date(existing.created_at)) {
+          companyProgressMap.set(companyId, progress);
+        }
+      });
+
+      const companiesWithProgress: CompanyWithProgress[] = companiesData.map(company => {
         const latestProgress = companyProgressMap.get(company.id);
         return {
           ...company,
@@ -61,74 +94,87 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
         };
       });
 
-    setCompanies(companiesWithProgress);
+      setCompanies(companiesWithProgress);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddCompany = () => {
+  const handleAddCompany = async () => {
     if (!newCompanyName.trim()) return;
 
-    const now = new Date().toISOString();
-    const newCompany: Company = {
-      id: crypto.randomUUID(),
-      name: newCompanyName.trim(),
-      created_at: now,
-      updated_at: now,
-    };
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
 
-    const savedCompanies = localStorage.getItem(COMPANIES_STORAGE_KEY);
-    const companiesData: Company[] = savedCompanies ? JSON.parse(savedCompanies) : [];
-    companiesData.push(newCompany);
-    localStorage.setItem(COMPANIES_STORAGE_KEY, JSON.stringify(companiesData));
+      const { data: companyData, error: companyError } = await supabase
+        .from('companies')
+        .insert([{ user_id: userId, name: newCompanyName.trim() }])
+        .select()
+        .single();
 
-    const savedNotes = localStorage.getItem(COMPANY_NOTES_STORAGE_KEY);
-    const notesData = savedNotes ? JSON.parse(savedNotes) : [];
-    notesData.push({
-      id: crypto.randomUUID(),
-      company_id: newCompany.id,
-      industry: '',
-      job_type: '',
-      location: '',
-      employee_count: '',
-      listing_status: '',
-      base_salary: '',
-      web_test: '',
-      working_hours: '',
-      mypage_url: '',
-      login_id: '',
-      password: '',
-      login_notes: '',
-      custom_fields: [],
-      free_memo: '',
-      created_at: now,
-      updated_at: now,
-    });
-    localStorage.setItem(COMPANY_NOTES_STORAGE_KEY, JSON.stringify(notesData));
+      if (companyError) throw companyError;
 
-    setCompanies([{ ...newCompany, latestProgress: undefined }, ...companies]);
-    setNewCompanyName('');
-    setShowAddModal(false);
+      await supabase.from('company_notes').insert([{
+        user_id: userId,
+        company_id: companyData.id,
+        industry: '',
+        job_type: '',
+        location: '',
+        employee_count: '',
+        listing_status: '',
+        base_salary: '',
+        web_test: '',
+        working_hours: '',
+        mypage_url: '',
+        login_id: '',
+        password: '',
+        login_notes: '',
+        custom_fields: [],
+        free_memo: '',
+      }]);
+
+      setCompanies([{ ...companyData, latestProgress: undefined }, ...companies]);
+      setNewCompanyName('');
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Error adding company:', error);
+      alert('企業の追加に失敗しました');
+    }
   };
 
-  const handleDeleteCompany = (companyId: string, e: React.MouseEvent) => {
+  const handleDeleteCompany = async (companyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm('この企業を削除してもよろしいですか？')) return;
 
-    const savedCompanies = localStorage.getItem(COMPANIES_STORAGE_KEY);
-    const companiesData: Company[] = savedCompanies ? JSON.parse(savedCompanies) : [];
-    const filtered = companiesData.filter(c => c.id !== companyId);
-    localStorage.setItem(COMPANIES_STORAGE_KEY, JSON.stringify(filtered));
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', companyId);
 
-    const savedNotes = localStorage.getItem(COMPANY_NOTES_STORAGE_KEY);
-    const notesData = savedNotes ? JSON.parse(savedNotes) : [];
-    const filteredNotes = notesData.filter((n: any) => n.company_id !== companyId);
-    localStorage.setItem(COMPANY_NOTES_STORAGE_KEY, JSON.stringify(filteredNotes));
+      if (error) throw error;
 
-    setCompanies(companies.filter(c => c.id !== companyId));
+      setCompanies(companies.filter(c => c.id !== companyId));
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      alert('企業の削除に失敗しました');
+    }
   };
 
   const filteredCompanies = companies.filter(company =>
     company.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-gray-600">読み込み中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-gray-50 relative pt-14">
