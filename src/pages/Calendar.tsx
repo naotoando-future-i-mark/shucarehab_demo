@@ -56,6 +56,17 @@ export default function Calendar() {
   };
 
   const initializeDefaultColorPresets = async (userId: string) => {
+    // React Strict Mode での重複実行を防ぐため、挿入前に再度チェック
+    const { data: existingPresets } = await supabase
+      .from('color_presets')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (existingPresets && existingPresets.length > 0) {
+      setColorPresets(existingPresets);
+      return;
+    }
+
     const defaultPresets: Omit<ColorPreset, 'id' | 'created_at' | 'updated_at'>[] = [
       { user_id: userId, label: '面接', color: '#3B82F6', order_index: 0 },
       { user_id: userId, label: '説明会', color: '#10B981', order_index: 1 },
