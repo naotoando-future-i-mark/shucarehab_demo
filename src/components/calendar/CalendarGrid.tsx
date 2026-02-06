@@ -86,12 +86,19 @@ export const CalendarGrid = ({
   // 指定日のイベントを取得
   const getEventsForDate = (date: Date) => {
     const mainEvents = events.filter(event => {
-      const eventDate = new Date(event.start_at);
-      const isOnDate = eventDate.getFullYear() === date.getFullYear() &&
-             eventDate.getMonth() === date.getMonth() &&
-             eventDate.getDate() === date.getDate();
-
-      if (isOnDate) return true;
+      // 終日イベントの場合、日付文字列から直接比較してタイムゾーン問題を回避
+      if (event.all_day) {
+        const eventDateStr = event.start_at.split('T')[0]; // YYYY-MM-DD
+        const checkDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const isOnDate = eventDateStr === checkDateStr;
+        if (isOnDate) return true;
+      } else {
+        const eventDate = new Date(event.start_at);
+        const isOnDate = eventDate.getFullYear() === date.getFullYear() &&
+               eventDate.getMonth() === date.getMonth() &&
+               eventDate.getDate() === date.getDate();
+        if (isOnDate) return true;
+      }
       return isRecurringEventOnDate(event, date);
     });
 
