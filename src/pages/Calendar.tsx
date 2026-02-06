@@ -76,30 +76,47 @@ export default function Calendar() {
     if (prefillData) {
       try {
         const data = JSON.parse(prefillData);
-        const now = new Date();
-        const startHour = now.getHours() + 1;
-        
-        const start = new Date();
-        start.setHours(startHour, 0, 0, 0);
-        const end = new Date(start);
-        end.setHours(end.getHours() + 1);
 
-        const formatDateTime = (d: Date) => {
-          const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
-          const hours = String(d.getHours()).padStart(2, '0');
-          const minutes = String(d.getMinutes()).padStart(2, '0');
-          return `${year}-${month}-${day}T${hours}:${minutes}`;
-        };
+        let startAt: string;
+        let endAt: string;
+        let allDay = false;
 
-        // プレフィルイベントを作成
+        if (data.date && data.startTime) {
+          startAt = `${data.date}T${data.startTime}`;
+          endAt = data.endDate && data.endTime
+            ? `${data.endDate}T${data.endTime}`
+            : `${data.date}T${data.startTime}`;
+        } else if (data.date) {
+          startAt = `${data.date}T00:00`;
+          endAt = `${data.endDate || data.date}T23:59`;
+          allDay = true;
+        } else {
+          const now = new Date();
+          const startHour = now.getHours() + 1;
+          const start = new Date();
+          start.setHours(startHour, 0, 0, 0);
+          const end = new Date(start);
+          end.setHours(end.getHours() + 1);
+
+          const formatDateTime = (d: Date) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+          };
+
+          startAt = formatDateTime(start);
+          endAt = formatDateTime(end);
+        }
+
         const prefillEvent: Event = {
           id: '',
           title: data.title || '',
-          start_at: formatDateTime(start),
-          end_at: formatDateTime(end),
-          all_day: false,
+          start_at: startAt,
+          end_at: endAt,
+          all_day: allDay,
           color_id: colorPresets[0]?.id || '1',
           event_type: data.eventType || 'intern',
           company_name: data.companyName || '',

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Clock, Trash2, CheckCircle2 } from 'lucide-react';
 import { SelectionEvent, SelectionProgress } from '../../types/company';
-import { Event } from '../../types/event';
+import { useRouter } from '../../router/Router';
 
 interface SelectionTabProps {
   companyNoteId: string;
@@ -17,7 +17,7 @@ interface SelectionTabProps {
 
 type Track = 'intern' | 'fulltime';
 
-const CALENDAR_STORAGE_KEY = 'shukarehub_events';
+const CALENDAR_PREFILL_KEY = 'shukarehub_calendar_prefill';
 
 export const SelectionTab = ({
   companyNoteId,
@@ -30,6 +30,7 @@ export const SelectionTab = ({
   onAddProgress,
   onDeleteProgress,
 }: SelectionTabProps) => {
+  const { navigate } = useRouter();
   const [selectedTrack, setSelectedTrack] = useState<Track>('intern');
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showAddProgressModal, setShowAddProgressModal] = useState(false);
@@ -53,50 +54,6 @@ export const SelectionTab = ({
   const handleAddEvent = () => {
     if (!eventFormData.title.trim()) return;
 
-    let calendarEventId: string | null = null;
-
-    if (createCalendarEvent) {
-      const savedEvents = localStorage.getItem(CALENDAR_STORAGE_KEY);
-      const calendarEvents: Event[] = savedEvents ? JSON.parse(savedEvents) : [];
-
-      let startAt: string;
-      let endAt: string;
-      let allDay = false;
-
-      if (eventFormData.date_type === 'schedule') {
-        if (eventFormData.start_time) {
-          startAt = `${eventFormData.start_date}T${eventFormData.start_time}`;
-          endAt = eventFormData.end_time && eventFormData.end_date
-            ? `${eventFormData.end_date}T${eventFormData.end_time}`
-            : `${eventFormData.start_date}T${eventFormData.start_time}`;
-        } else {
-          startAt = `${eventFormData.start_date}T00:00`;
-          endAt = `${eventFormData.end_date || eventFormData.start_date}T23:59`;
-          allDay = true;
-        }
-      } else {
-        startAt = `${eventFormData.deadline_date}T00:00`;
-        endAt = `${eventFormData.deadline_date}T23:59`;
-        allDay = true;
-      }
-
-      calendarEventId = Date.now().toString();
-      const newCalendarEvent: Event = {
-        id: calendarEventId,
-        title: eventFormData.title,
-        start_at: startAt,
-        end_at: endAt,
-        all_day: allDay,
-        color_id: '1',
-        event_type: selectedTrack,
-        company_name: companyName,
-        memo: eventFormData.memo,
-      };
-
-      calendarEvents.push(newCalendarEvent);
-      localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(calendarEvents));
-    }
-
     onAddEvent({
       company_note_id: companyNoteId,
       track_type: selectedTrack,
@@ -110,8 +67,25 @@ export const SelectionTab = ({
       end_time: eventFormData.end_time,
       status: 'pending',
       memo: eventFormData.memo,
-      calendar_event_id: calendarEventId || undefined,
     });
+
+    if (createCalendarEvent) {
+      const prefillData = {
+        title: eventFormData.title,
+        eventType: selectedTrack,
+        companyName: companyName,
+        deadlineDate: eventFormData.date_type === 'deadline' ? eventFormData.deadline_date : '',
+        date: eventFormData.date_type === 'schedule' ? eventFormData.start_date : '',
+        startTime: eventFormData.date_type === 'schedule' ? eventFormData.start_time : '',
+        endDate: eventFormData.date_type === 'schedule' ? eventFormData.end_date : '',
+        endTime: eventFormData.date_type === 'schedule' ? eventFormData.end_time : '',
+        memo: eventFormData.memo,
+      };
+
+      localStorage.setItem(CALENDAR_PREFILL_KEY, JSON.stringify(prefillData));
+
+      navigate('/calendar');
+    }
 
     setEventFormData({
       title: '',
@@ -125,19 +99,6 @@ export const SelectionTab = ({
       memo: '',
     });
     setShowAddEventModal(false);
-  };
-
-  const handleDeleteEventWithCalendar = (eventId: string) => {
-    const event = events.find(e => e.id === eventId);
-
-    if (event?.calendar_event_id) {
-      const savedEvents = localStorage.getItem(CALENDAR_STORAGE_KEY);
-      const calendarEvents: Event[] = savedEvents ? JSON.parse(savedEvents) : [];
-      const filteredEvents = calendarEvents.filter(e => e.id !== event.calendar_event_id);
-      localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(filteredEvents));
-    }
-
-    onDeleteEvent(eventId);
   };
 
   const handleAddProgress = () => {
@@ -296,7 +257,7 @@ export const SelectionTab = ({
                       </div>
 
                       <button
-                        onClick={() => handleDeleteEventWithCalendar(event.id)}
+                        onClick={() => onDeleteEvent(event.id)}
                         className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 rounded"
                       >
                         <Trash2 size={14} className="text-red-500" />
@@ -414,7 +375,7 @@ export const SelectionTab = ({
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                 <div>
                   <p className="text-sm font-medium text-gray-700">カレンダーを同時作成</p>
-                  <p className="text-xs text-gray-500 mt-0.5">カレンダーページにも自動登録します</p>
+                  <p className="text-xs text-gray-500 mt-0.5">カレンダーページに遷移して登録します</p>
                 </div>
                 <button
                   onClick={() => setCreateCalendarEvent(!createCalendarEvent)}
