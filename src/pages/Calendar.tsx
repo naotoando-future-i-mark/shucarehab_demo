@@ -223,24 +223,45 @@ export default function Calendar() {
   };
 
   const handleSaveEvent = async (eventData: Omit<Event, 'id'>) => {
+    console.log('handleSaveEvent called with:', eventData);
+
     try {
       const userId = await getCurrentUserId();
-      if (!userId) return;
+      console.log('Current user ID:', userId);
+
+      if (!userId) {
+        alert('ログインしていません。ログインしてください。');
+        return;
+      }
+
+      const insertData = { ...eventData, user_id: userId };
+      console.log('Inserting event data to Supabase:', insertData);
 
       const { data, error } = await supabase
         .from('events')
-        .insert([{ ...eventData, user_id: userId }])
+        .insert([insertData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+        throw error;
+      }
+
+      console.log('Event saved successfully:', data);
 
       if (data) {
         setEvents(prev => [...prev, data]);
+        alert('予定を保存しました！');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving event:', error);
-      alert('イベントの保存に失敗しました');
+      alert(`イベントの保存に失敗しました: ${error.message || 'エラーが発生しました'}\n\nコンソールを確認してください。`);
     }
   };
 

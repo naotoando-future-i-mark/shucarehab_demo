@@ -156,7 +156,19 @@ export const AddEventModal = ({
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!title || !startDate || !endDate || !colorId) return;
+    if (!title || !startDate || !endDate || !colorId) {
+      console.log('Validation failed:', { title, startDate, endDate, colorId });
+      return;
+    }
+
+    console.log('Preparing to save event with data:', {
+      title,
+      startDate,
+      endDate,
+      colorId,
+      eventType,
+      companyName,
+    });
 
     const eventData: Omit<Event, 'id'> = {
       title,
@@ -180,18 +192,22 @@ export const AddEventModal = ({
       recurrence_end_count: recurrence.endCount,
       recurrence_end_date: recurrence.endDate,
       notifications,
-      preparation_dates: preparationDates.filter(d => d.date).map((pd) => ({
+      preparation_dates: editingEvent ? preparationDates.filter(d => d.date).map((pd) => ({
         id: crypto.randomUUID(),
-        event_id: editingEvent?.id || '',
+        event_id: editingEvent.id,
         date: pd.date,
         end_date: pd.end_date,
         title: pd.title || title,
-      })),
+      })) : undefined,
     };
 
+    console.log('Event data prepared:', eventData);
+
     if (editingEvent && onUpdate) {
+      console.log('Updating event:', editingEvent.id);
       onUpdate({ ...eventData, id: editingEvent.id });
     } else {
+      console.log('Creating new event');
       onSave(eventData);
     }
     handleClose();
