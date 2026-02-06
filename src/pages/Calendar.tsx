@@ -73,9 +73,12 @@ export default function Calendar() {
   // プレフィルデータをチェック（企業ページからの遷移）
   useEffect(() => {
     const prefillData = localStorage.getItem(PREFILL_KEY);
+    console.log('Checking prefill data:', prefillData);
+
     if (prefillData) {
       try {
         const data = JSON.parse(prefillData);
+        console.log('Parsed prefill data:', data);
 
         let startAt: string;
         let endAt: string;
@@ -86,10 +89,17 @@ export default function Calendar() {
           endAt = data.endDate && data.endTime
             ? `${data.endDate}T${data.endTime}`
             : `${data.date}T${data.startTime}`;
+          console.log('Using schedule date/time:', { startAt, endAt });
         } else if (data.date) {
           startAt = `${data.date}T00:00`;
           endAt = `${data.endDate || data.date}T23:59`;
           allDay = true;
+          console.log('Using all-day event:', { startAt, endAt });
+        } else if (data.deadlineDate) {
+          startAt = `${data.deadlineDate}T00:00`;
+          endAt = `${data.deadlineDate}T23:59`;
+          allDay = true;
+          console.log('Using deadline date:', { startAt, endAt });
         } else {
           const now = new Date();
           const startHour = now.getHours() + 1;
@@ -109,6 +119,7 @@ export default function Calendar() {
 
           startAt = formatDateTime(start);
           endAt = formatDateTime(end);
+          console.log('Using default date/time:', { startAt, endAt });
         }
 
         const prefillEvent: Event = {
@@ -124,6 +135,7 @@ export default function Calendar() {
           memo: data.memo || '',
         };
 
+        console.log('Created prefill event:', prefillEvent);
         setEditingEvent(prefillEvent);
         setIsAddModalOpen(true);
         localStorage.removeItem(PREFILL_KEY);
@@ -132,7 +144,7 @@ export default function Calendar() {
         localStorage.removeItem(PREFILL_KEY);
       }
     }
-  }, [colorPresets]);
+  }, []);
 
   // FAB からの予定追加イベント
   useEffect(() => {

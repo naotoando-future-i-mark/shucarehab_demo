@@ -63,7 +63,9 @@ export const AddEventModal = ({
 
   // 編集時のデータ読み込み
   useEffect(() => {
+    console.log('AddEventModal useEffect - editingEvent:', editingEvent, 'isOpen:', isOpen);
     if (editingEvent) {
+      console.log('Loading editing event data:', editingEvent);
       setTitle(editingEvent.title);
       setEventType(editingEvent.event_type || '');
       setColorId(editingEvent.color_id);

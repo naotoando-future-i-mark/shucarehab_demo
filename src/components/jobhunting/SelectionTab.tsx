@@ -82,7 +82,9 @@ export const SelectionTab = ({
         memo: eventFormData.memo,
       };
 
+      console.log('Saving prefill data to localStorage:', prefillData);
       localStorage.setItem(CALENDAR_PREFILL_KEY, JSON.stringify(prefillData));
+      console.log('Navigating to calendar...');
 
       navigate('/calendar');
     }
