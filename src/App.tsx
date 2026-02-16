@@ -5,6 +5,8 @@ import FloatingButton from './components/FloatingButton';
 import Header from './components/Header';
 
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
+import UpdatePassword from './pages/UpdatePassword';
 import Calendar from './pages/Calendar';
 import Companies from './pages/Companies';
 import Magazine from './pages/Magazine';
@@ -31,7 +33,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
         setAuthed(!!session);
         setLoading(false);
 
-        if (!session && currentPath !== '/login') {
+        const publicPaths = ['/login', '/reset-password', '/update-password'];
+        if (!session && !publicPaths.includes(currentPath)) {
           navigate('/login');
         }
 
@@ -43,7 +46,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
         if (mounted) {
           setLoading(false);
           setAuthed(false);
-          if (currentPath !== '/login') {
+          const publicPaths = ['/login', '/reset-password', '/update-password'];
+          if (!publicPaths.includes(currentPath)) {
             navigate('/login');
           }
         }
@@ -58,7 +62,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
       setAuthed(!!session);
 
-      if (!session && currentPath !== '/login') {
+      const publicPaths = ['/login', '/reset-password', '/update-password'];
+      if (!session && !publicPaths.includes(currentPath)) {
         navigate('/login');
       }
 
@@ -102,10 +107,14 @@ function AppInner() {
 
   const hideBottomTab =
     currentPath === '/login' ||
+    currentPath === '/reset-password' ||
+    currentPath === '/update-password' ||
     currentPath === '/magazine/new';
 
   const hideHeader =
   currentPath === '/login' ||
+  currentPath === '/reset-password' ||
+  currentPath === '/update-password' ||
   currentPath === '/calendar';
 
   // FloatingButtonは使わない
@@ -116,6 +125,16 @@ function AppInner() {
       {/* ログイン */}
       <Route path="/login">
         <Login />
+      </Route>
+
+      {/* パスワードリセット */}
+      <Route path="/reset-password">
+        <ResetPassword />
+      </Route>
+
+      {/* パスワード更新 */}
+      <Route path="/update-password">
+        <UpdatePassword />
       </Route>
 
       {/* ログイン後 */}

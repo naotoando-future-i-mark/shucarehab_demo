@@ -87,28 +87,6 @@ export default function Login() {
     }
   };
 
-  const onResetPassword = async () => {
-    if (!email.trim()) {
-      setError('メールアドレスを入力してください');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-
-      if (error) throw error;
-
-      alert('パスワードリセットメールを送信しました');
-    } catch (err: any) {
-      console.error('Reset password error:', err);
-      setError(err.message || 'パスワードリセットに失敗しました');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-6">
@@ -169,9 +147,9 @@ export default function Login() {
 
         {!isSignUp && (
           <button
-            onClick={onResetPassword}
+            onClick={() => navigate('/reset-password')}
             disabled={loading}
-            className="w-full text-sm text-blue-600 mt-3 disabled:opacity-50"
+            className="w-full text-sm text-blue-600 mt-3 hover:underline disabled:opacity-50"
           >
             パスワードを忘れた方はこちら
           </button>
