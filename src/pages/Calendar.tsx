@@ -412,6 +412,7 @@ export default function Calendar() {
     { path: '/companies', icon: '🏢', label: '企業を探す' },
     { path: '/magazine', icon: '📰', label: '就活マガジン' },
     { path: '/memo', icon: '📝', label: '就活ノート' },
+    { path: '/mypage', icon: '👤', label: 'マイページ' },
     { path: '/settings', icon: '⚙️', label: '設定' },
   ];
 

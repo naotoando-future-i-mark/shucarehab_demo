@@ -47,6 +47,7 @@ export default function Settings() {
         supabase.from('color_presets').delete().eq('user_id', user.id),
         supabase.from('companies').delete().eq('user_id', user.id),
         supabase.from('memos').delete().eq('user_id', user.id),
+        supabase.from('user_profiles').delete().eq('user_id', user.id),
       ]);
 
       await supabase.auth.signOut();
