@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Menu, X } from 'lucide-react';
 import { Event } from '../types/event';
 import { ColorPreset } from '../data/colorPresets';
 import { Header } from '../components/calendar/Header';
@@ -8,6 +8,7 @@ import { YearMonthSelector } from '../components/calendar/YearMonthSelector';
 import { DayEventsSheet } from '../components/calendar/DayEventsSheet';
 import { AddEventModal } from '../components/calendar/AddEventModal';
 import { supabase, getCurrentUserId } from '../lib/supabase';
+import { useRouter } from '../router/Router';
 
 const PREFILL_KEY = 'shukarehub_calendar_prefill';
 
@@ -25,6 +26,9 @@ export default function Calendar() {
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | undefined>(undefined);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const { navigate } = useRouter();
 
   useEffect(() => {
     loadData();
@@ -403,6 +407,19 @@ export default function Calendar() {
     );
   }
 
+  const menuItems = [
+    { path: '/calendar', icon: '📅', label: 'カレンダー' },
+    { path: '/companies', icon: '🏢', label: '企業を探す' },
+    { path: '/magazine', icon: '📰', label: '就活マガジン' },
+    { path: '/memo', icon: '📝', label: '就活ノート' },
+    { path: '/settings', icon: '⚙️', label: '設定' },
+  ];
+
+  const handleNavigate = (path: string) => {
+    setIsMenuOpen(false);
+    navigate(path);
+  };
+
   return (
     <div className="pt-0 pb-16 bg-white min-h-screen max-w-md mx-auto flex flex-col relative">
       {/* ヘッダー */}
@@ -410,7 +427,41 @@ export default function Calendar() {
         currentDate={currentDate}
         onTodayClick={handleTodayClick}
         onYearMonthClick={() => setIsYearMonthSelectorOpen(true)}
+        onMenuClick={() => setIsMenuOpen(true)}
       />
+
+      {/* メニューオーバーレイ */}
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-40"
+          onClick={() => setIsMenuOpen(false)}
+        />
+      )}
+
+      {/* サイドメニュー */}
+      <div
+        className={`fixed top-0 left-0 h-full w-64 bg-white z-50 transform transition-transform ${
+          isMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="p-4 border-b border-gray-200 flex justify-end">
+          <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-600">
+            <X size={24} />
+          </button>
+        </div>
+        <nav className="py-2">
+          {menuItems.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => handleNavigate(item.path)}
+              className="w-full px-4 py-4 flex items-center gap-4 hover:bg-gray-50 text-left"
+            >
+              <span className="text-2xl">{item.icon}</span>
+              <span className="text-gray-800">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
 
       {/* カレンダーグリッド */}
       <div className="flex-1 min-h-0 h-[calc(100vh-120px)]">

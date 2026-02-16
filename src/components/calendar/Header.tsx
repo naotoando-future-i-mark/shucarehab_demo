@@ -1,18 +1,23 @@
 import { Menu, Bell, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 
 interface HeaderProps {
   currentDate: Date;
   onTodayClick: () => void;
   onYearMonthClick: () => void;
+  onMenuClick: () => void;
 }
 
-export const Header = ({ currentDate, onTodayClick, onYearMonthClick }: HeaderProps) => {
+export const Header = ({ currentDate, onTodayClick, onYearMonthClick, onMenuClick }: HeaderProps) => {
   const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
   return (
     <header className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100">
       <div className="flex items-center gap-2">
-        <button className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+        <button
+          onClick={onMenuClick}
+          className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        >
           <Menu size={20} />
         </button>
         <button

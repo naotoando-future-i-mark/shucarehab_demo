@@ -13,6 +13,7 @@ import Magazine from './pages/Magazine';
 import Create from './pages/Create';
 import Notes from './pages/Notes';
 import CompanyDetail from './pages/CompanyDetail';
+import Settings from './pages/Settings';
 import { supabase } from './lib/supabase';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -161,6 +162,10 @@ function AppInner() {
 
         <Route path="/notes">
           <Notes />
+        </Route>
+
+        <Route path="/settings">
+          <Settings />
         </Route>
       </RequireAuth>
 
