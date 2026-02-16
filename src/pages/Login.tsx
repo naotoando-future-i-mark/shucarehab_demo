@@ -36,7 +36,16 @@ export default function Login() {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          setError('メールアドレスが確認されていません。確認メールをご確認ください。');
+        } else if (error.message.includes('Invalid login credentials')) {
+          setError('メールアドレスまたはパスワードが正しくありません');
+        } else {
+          throw error;
+        }
+        return;
+      }
 
       if (data.user && data.session) {
         console.log('Login successful, session:', data.session);
@@ -73,11 +82,18 @@ export default function Login() {
 
       if (error) throw error;
 
-      if (data.user && data.session) {
-        console.log('SignUp successful, session:', data.session);
-        alert('アカウント作成が完了しました');
-        await new Promise(resolve => setTimeout(resolve, 100));
-        navigate('/calendar');
+      if (data.user) {
+        if (data.session) {
+          console.log('SignUp successful with session:', data.session);
+          alert('アカウント作成が完了しました');
+          await new Promise(resolve => setTimeout(resolve, 100));
+          navigate('/calendar');
+        } else {
+          console.log('SignUp successful, email confirmation required');
+          alert('確認メールを送信しました。メール内のリンクをクリックしてアカウントを有効化してください。');
+          setIsSignUp(false);
+          setPassword('');
+        }
       }
     } catch (err: any) {
       console.error('SignUp error:', err);
