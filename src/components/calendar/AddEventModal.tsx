@@ -156,16 +156,18 @@ export const AddEventModal = ({
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!title || !startDate || !endDate || !colorId) {
-      console.log('Validation failed:', { title, startDate, endDate, colorId });
+    if (!title || !startDate || !endDate) {
+      console.log('Validation failed:', { title, startDate, endDate });
       return;
     }
+
+    const finalColorId = colorId || (colorPresets.length > 0 ? colorPresets[0].id : '');
 
     console.log('Preparing to save event with data:', {
       title,
       startDate,
       endDate,
-      colorId,
+      colorId: finalColorId,
       eventType,
       companyName,
     });
@@ -175,7 +177,7 @@ export const AddEventModal = ({
       start_at: allDay ? startDate : startDate,
       end_at: allDay ? endDate : endDate,
       all_day: allDay,
-      color_id: colorId,
+      color_id: finalColorId,
       event_type: eventType || undefined,
       company_name: companyName || undefined,
       deadline_at: hasDeadline && deadlineAt ? deadlineAt : undefined,

@@ -76,12 +76,16 @@ export default function Calendar() {
       }
 
       const defaultPresets: Omit<ColorPreset, 'id' | 'created_at' | 'updated_at'>[] = [
-        { user_id: userId, label: '面接', color: '#3B82F6', order_index: 0 },
-        { user_id: userId, label: '説明会', color: '#10B981', order_index: 1 },
-        { user_id: userId, label: 'ES締切', color: '#F59E0B', order_index: 2 },
-        { user_id: userId, label: '試験', color: '#EF4444', order_index: 3 },
-        { user_id: userId, label: 'インターン', color: '#8B5CF6', order_index: 4 },
-        { user_id: userId, label: 'その他', color: '#EC4899', order_index: 5 },
+        { user_id: userId, label: '説明会', color: '#FF9500', order_index: 0 },
+        { user_id: userId, label: '面接', color: '#007AFF', order_index: 1 },
+        { user_id: userId, label: 'ES締切', color: '#FF3B30', order_index: 2 },
+        { user_id: userId, label: '筆記試験', color: '#5856D6', order_index: 3 },
+        { user_id: userId, label: 'GD', color: '#34C759', order_index: 4 },
+        { user_id: userId, label: 'インターン', color: '#FF2D55', order_index: 5 },
+        { user_id: userId, label: 'OB訪問', color: '#00C7BE', order_index: 6 },
+        { user_id: userId, label: '内定式', color: '#FFD60A', order_index: 7 },
+        { user_id: userId, label: '対策日', color: '#8E8E93', order_index: 8 },
+        { user_id: userId, label: 'その他', color: '#AF52DE', order_index: 9 },
       ];
 
       const { data, error } = await supabase.from('color_presets').insert(defaultPresets).select();
@@ -361,11 +365,18 @@ export default function Calendar() {
 
       await supabase.from('color_presets').delete().eq('user_id', userId);
 
-      const presetsWithOrder = presets.map((preset, index) => ({
-        ...preset,
-        order_index: index,
-        user_id: userId,
-      }));
+      const presetsWithOrder = presets.map((preset, index) => {
+        const cleanPreset: any = {
+          label: preset.label,
+          color: preset.color,
+          order_index: index,
+          user_id: userId,
+        };
+        if (!preset.id.startsWith('temp-')) {
+          cleanPreset.id = preset.id;
+        }
+        return cleanPreset;
+      });
 
       const { data, error } = await supabase
         .from('color_presets')
