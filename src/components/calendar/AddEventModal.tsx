@@ -205,7 +205,8 @@ export const AddEventModal = ({
 
     console.log('Event data prepared:', eventData);
 
-    if (editingEvent && onUpdate) {
+    // idが空文字または存在しない場合は新規作成として扱う
+    if (editingEvent && editingEvent.id && onUpdate) {
       console.log('Updating event:', editingEvent.id);
       onUpdate({ ...eventData, id: editingEvent.id });
     } else {

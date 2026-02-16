@@ -152,8 +152,9 @@ export default function Calendar() {
           console.log('Using default date/time:', { startAt, endAt });
         }
 
-        const prefillEvent: Event = {
-          id: '',
+        // プレフィルイベントは新規作成なので、idを含めない一時オブジェクトとして扱う
+        const prefillEvent: any = {
+          id: '', // 空のIDでマーカーとして使用（モーダル側で新規作成として判定）
           title: data.title || '',
           start_at: startAt,
           end_at: endAt,
