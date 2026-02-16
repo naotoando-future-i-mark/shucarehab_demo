@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from '../router/Router';
 import { supabase } from '../lib/supabase';
 
@@ -9,6 +9,17 @@ export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log('Existing session found, redirecting to calendar');
+        navigate('/calendar');
+      }
+    };
+    checkExistingSession();
+  }, [navigate]);
 
   const onLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -27,7 +38,9 @@ export default function Login() {
 
       if (error) throw error;
 
-      if (data.user) {
+      if (data.user && data.session) {
+        console.log('Login successful, session:', data.session);
+        await new Promise(resolve => setTimeout(resolve, 100));
         navigate('/calendar');
       }
     } catch (err: any) {
@@ -60,8 +73,10 @@ export default function Login() {
 
       if (error) throw error;
 
-      if (data.user) {
+      if (data.user && data.session) {
+        console.log('SignUp successful, session:', data.session);
         alert('アカウント作成が完了しました');
+        await new Promise(resolve => setTimeout(resolve, 100));
         navigate('/calendar');
       }
     } catch (err: any) {

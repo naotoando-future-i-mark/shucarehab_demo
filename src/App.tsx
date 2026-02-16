@@ -19,20 +19,43 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthed(!!session);
-      setLoading(false);
+    let mounted = true;
 
-      if (!session && currentPath !== '/login') {
-        navigate('/login');
-      }
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Session check:', { session: !!session, error, path: currentPath });
 
-      if (session && currentPath === '/login') {
-        navigate('/calendar');
+        if (!mounted) return;
+
+        setAuthed(!!session);
+        setLoading(false);
+
+        if (!session && currentPath !== '/login') {
+          navigate('/login');
+        }
+
+        if (session && currentPath === '/login') {
+          navigate('/calendar');
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
+        if (mounted) {
+          setLoading(false);
+          setAuthed(false);
+          if (currentPath !== '/login') {
+            navigate('/login');
+          }
+        }
       }
-    });
+    };
+
+    checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', { event: _event, session: !!session });
+      if (!mounted) return;
+
       setAuthed(!!session);
 
       if (!session && currentPath !== '/login') {
@@ -44,7 +67,10 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [currentPath, navigate]);
 
   if (loading) {
