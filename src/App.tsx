@@ -13,7 +13,6 @@ import Companies from './pages/Companies';
 import Magazine from './pages/Magazine';
 import Create from './pages/Create';
 import Notes from './pages/Notes';
-import Memo from './pages/Memo';
 import CompanyDetail from './pages/CompanyDetail';
 import MyPage from './pages/MyPage';
 import Settings from './pages/Settings';
@@ -117,10 +116,10 @@ function AppInner() {
     currentPath === '/magazine/new';
 
   const hideHeader =
-  currentPath === '/login' ||
-  currentPath === '/reset-password' ||
-  currentPath === '/update-password' ||
-  currentPath === '/calendar';
+    currentPath === '/login' ||
+    currentPath === '/reset-password' ||
+    currentPath === '/update-password' ||
+    currentPath === '/calendar';
 
   // FloatingButtonは使わない
   const showFloatingButton = false;
@@ -166,10 +165,6 @@ function AppInner() {
 
         <Route path="/notes">
           <Notes />
-        </Route>
-
-        <Route path="/memo">
-          <Memo />
         </Route>
 
         <Route path="/mypage">
