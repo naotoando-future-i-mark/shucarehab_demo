@@ -114,7 +114,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       setCompanyNote(updatedNote);
     } catch (error) {
       console.error('Error updating note:', error);
-      showToast('更新に失敗しました', 'error');
+      showToast('ノートの更新に失敗しました', 'error');
     }
   };
 
@@ -222,7 +222,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       }
     } catch (error) {
       console.error('Error adding progress:', error);
-      showToast('進捗の追加に失敗しました', 'error');
+      showToast('選考進捗の追加に失敗しました', 'error');
     }
   };
 
@@ -238,7 +238,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       setSelectionProgress(selectionProgress.filter(p => p.id !== progressId));
     } catch (error) {
       console.error('Error deleting progress:', error);
-      showToast('進捗の削除に失敗しました', 'error');
+      showToast('選考進捗の削除に失敗しました', 'error');
     }
   };
 
@@ -260,7 +260,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       }
     } catch (error) {
       console.error('Error adding site:', error);
-      showToast('サイトの追加に失敗しました', 'error');
+      showToast('参考サイトの追加に失敗しました', 'error');
     }
   };
 
@@ -276,7 +276,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       setReferenceSites(referenceSites.filter(s => s.id !== siteId));
     } catch (error) {
       console.error('Error deleting site:', error);
-      showToast('サイトの削除に失敗しました', 'error');
+      showToast('参考サイトの削除に失敗しました', 'error');
     }
   };
 
@@ -309,7 +309,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
               activeTab === 'selection' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            選考状況
+            選考管理
           </button>
         </div>
       </div>
