@@ -4,6 +4,7 @@ import { Company, CompanyNote, CompanyMemo, SelectionEvent, SelectionProgress, R
 import { MemoTab } from '../components/jobhunting/MemoTab';
 import { SelectionTab } from '../components/jobhunting/SelectionTab';
 import { supabase, getCurrentUserId } from '../lib/supabase';
+import { showToast } from '../components/Toast';
 
 interface CompanyNotePageProps {
   companyId: string;
@@ -113,7 +114,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       setCompanyNote(updatedNote);
     } catch (error) {
       console.error('Error updating note:', error);
-      alert('更新に失敗しました');
+      showToast('更新に失敗しました', 'error');
     }
   };
 
@@ -132,7 +133,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       }
     } catch (error) {
       console.error('Error adding memo:', error);
-      alert('メモの追加に失敗しました');
+      showToast('メモの追加に失敗しました', 'error');
     }
   };
 
@@ -148,7 +149,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       setCompanyMemos(companyMemos.map(m => m.id === memoId ? { ...m, ...updates } : m));
     } catch (error) {
       console.error('Error updating memo:', error);
-      alert('メモの更新に失敗しました');
+      showToast('メモの更新に失敗しました', 'error');
     }
   };
 
@@ -169,7 +170,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       return null;
     } catch (error) {
       console.error('Error adding event:', error);
-      alert('イベントの追加に失敗しました');
+      showToast('イベントの追加に失敗しました', 'error');
       return null;
     }
   };
@@ -186,7 +187,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       setSelectionEvents(selectionEvents.map(e => e.id === eventId ? { ...e, ...updates } : e));
     } catch (error) {
       console.error('Error updating event:', error);
-      alert('イベントの更新に失敗しました');
+      showToast('イベントの更新に失敗しました', 'error');
     }
   };
 
@@ -202,7 +203,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       setSelectionEvents(selectionEvents.filter(e => e.id !== eventId));
     } catch (error) {
       console.error('Error deleting event:', error);
-      alert('イベントの削除に失敗しました');
+      showToast('イベントの削除に失敗しました', 'error');
     }
   };
 
@@ -221,7 +222,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       }
     } catch (error) {
       console.error('Error adding progress:', error);
-      alert('進捗の追加に失敗しました');
+      showToast('進捗の追加に失敗しました', 'error');
     }
   };
 
@@ -237,7 +238,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       setSelectionProgress(selectionProgress.filter(p => p.id !== progressId));
     } catch (error) {
       console.error('Error deleting progress:', error);
-      alert('進捗の削除に失敗しました');
+      showToast('進捗の削除に失敗しました', 'error');
     }
   };
 
@@ -259,7 +260,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       }
     } catch (error) {
       console.error('Error adding site:', error);
-      alert('サイトの追加に失敗しました');
+      showToast('サイトの追加に失敗しました', 'error');
     }
   };
 
@@ -275,7 +276,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
       setReferenceSites(referenceSites.filter(s => s.id !== siteId));
     } catch (error) {
       console.error('Error deleting site:', error);
-      alert('サイトの削除に失敗しました');
+      showToast('サイトの削除に失敗しました', 'error');
     }
   };
 

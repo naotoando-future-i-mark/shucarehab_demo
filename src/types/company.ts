@@ -37,7 +37,7 @@ export interface CompanyMemo {
   category: '企業研究' | '面接対策' | 'ES' | 'その他';
   title: string;
   content: string;
-  is_deleted: boolean;
+  is_deleted?: boolean;
   created_at: string;
   updated_at: string;
 }

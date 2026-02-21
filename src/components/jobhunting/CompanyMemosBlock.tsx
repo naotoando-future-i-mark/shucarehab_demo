@@ -49,7 +49,6 @@ export const CompanyMemosBlock = ({ companyNoteId, memos, onAddMemo, onUpdateMem
         category: editingMemo.category as CompanyMemo['category'],
         title: editingMemo.category,
         content,
-        is_deleted: false,
       });
     }
     setEditingMemo(null);
