@@ -1,6 +1,7 @@
 import { Bookmark, ExternalLink, Grid3X3, List, ChevronLeft, Send } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase, getCurrentUserId } from '../lib/supabase';
+import { showToast } from '../components/Toast';
 
 type CompanyTag = {
   id: string;
@@ -73,7 +74,6 @@ const dummyPosts: Post[] = [
   },
 ];
 
-// 画像スライダー
 function ImageSlider({ images }: { images: Post['images'] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showTags, setShowTags] = useState(false);
@@ -106,7 +106,6 @@ function ImageSlider({ images }: { images: Post['images'] }) {
         onClick={handleImageClick}
       />
 
-      {/* 企業タグ */}
       {showTags && hasTags && currentImage.tags?.map((tag) => (
         <button
           key={tag.id}
@@ -122,14 +121,12 @@ function ImageSlider({ images }: { images: Post['images'] }) {
         </button>
       ))}
 
-      {/* タップヒント */}
       {hasTags && !showTags && (
         <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
           タップして企業を見る
         </div>
       )}
 
-      {/* 前へボタン */}
       {images.length > 1 && currentIndex > 0 && (
         <button
           onClick={goToPrev}
@@ -139,7 +136,6 @@ function ImageSlider({ images }: { images: Post['images'] }) {
         </button>
       )}
 
-      {/* 次へボタン */}
       {images.length > 1 && currentIndex < images.length - 1 && (
         <button
           onClick={goToNext}
@@ -149,7 +145,6 @@ function ImageSlider({ images }: { images: Post['images'] }) {
         </button>
       )}
 
-      {/* ドットインジケーター */}
       {images.length > 1 && (
         <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
           {images.map((_, idx) => (
@@ -164,19 +159,17 @@ function ImageSlider({ images }: { images: Post['images'] }) {
   );
 }
 
-// 投稿詳細モーダル
-function PostDetail({ 
-  post, 
-  onClose, 
-  isSaved, 
-  onToggleSave 
-}: { 
-  post: Post; 
-  onClose: () => void; 
+function PostDetail({
+  post,
+  onClose,
+  isSaved,
+  onToggleSave
+}: {
+  post: Post;
+  onClose: () => void;
   isSaved: boolean;
   onToggleSave: () => void;
 }) {
-  // 共有機能
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -190,14 +183,13 @@ function PostDetail({
       }
     } else {
       await navigator.clipboard.writeText(window.location.href);
-      alert('リンクをコピーしました');
+      showToast('リンクをコピーしました', 'success');
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex justify-center">
       <div className="w-full max-w-md bg-white overflow-y-auto">
-        {/* ヘッダー */}
         <div className="sticky top-0 bg-white z-10">
           <div className="flex items-center p-3">
             <button onClick={onClose} className="p-1">
@@ -206,23 +198,20 @@ function PostDetail({
           </div>
         </div>
 
-        {/* 画像スライダー */}
         <ImageSlider images={post.images} />
 
-        {/* アクションボタン（画像の下） */}
         <div className="flex items-center justify-end gap-4 px-4 py-2">
           <button onClick={handleShare} className="p-1">
             <Send size={22} className="text-gray-600" />
           </button>
           <button onClick={onToggleSave} className="p-1">
-            <Bookmark 
-              size={22} 
-              className={isSaved ? 'text-orange-500 fill-orange-500' : 'text-gray-600'} 
+            <Bookmark
+              size={22}
+              className={isSaved ? 'text-orange-500 fill-orange-500' : 'text-gray-600'}
             />
           </button>
         </div>
 
-        {/* 投稿情報 */}
         <div className="px-4 pb-4">
           <h2 className="text-lg font-bold text-blue-600 mb-2">{post.title}</h2>
           <p className="text-gray-600 text-sm">{post.description}</p>
@@ -232,7 +221,6 @@ function PostDetail({
   );
 }
 
-// グリッドサムネイル
 function GridThumbnail({ post, onClick, isSaved }: { post: Post; onClick: () => void; isSaved: boolean }) {
   return (
     <button
@@ -321,7 +309,7 @@ export default function Magazine() {
       }
     } catch (error) {
       console.error('Error toggling save:', error);
-      alert('保存の更新に失敗しました');
+      showToast('保存の更新に失敗しました', 'error');
     }
   };
 
@@ -331,7 +319,6 @@ export default function Magazine() {
 
   return (
     <div className="pt-14 pb-20 bg-white min-h-screen max-w-md mx-auto">
-      {/* タブ */}
       <div className="flex border-b sticky top-14 bg-white z-10">
         <button
           onClick={() => setActiveTab('magazine')}
@@ -355,7 +342,6 @@ export default function Magazine() {
         </button>
       </div>
 
-      {/* 表示切替 */}
       {activeTab === 'magazine' && (
         <div className="flex justify-end p-2 gap-2">
           <button
@@ -373,7 +359,6 @@ export default function Magazine() {
         </div>
       )}
 
-      {/* コンテンツ */}
       {activeTab === 'saved' && savedPostIds.size === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-400">
           <Bookmark size={48} className="mb-4" />
@@ -398,13 +383,13 @@ export default function Magazine() {
               <div className="p-3">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-bold text-sm flex-1">{post.title}</h3>
-                  <button 
+                  <button
                     onClick={() => toggleSave(post.id)}
                     className="p-1"
                   >
-                    <Bookmark 
-                      size={20} 
-                      className={savedPostIds.has(post.id) ? 'text-orange-500 fill-orange-500' : 'text-gray-400'} 
+                    <Bookmark
+                      size={20}
+                      className={savedPostIds.has(post.id) ? 'text-orange-500 fill-orange-500' : 'text-gray-400'}
                     />
                   </button>
                 </div>
@@ -415,7 +400,6 @@ export default function Magazine() {
         </div>
       )}
 
-      {/* 投稿詳細モーダル */}
       {selectedPost && (
         <PostDetail
           post={selectedPost}
@@ -427,4 +411,3 @@ export default function Magazine() {
     </div>
   );
 }
-
