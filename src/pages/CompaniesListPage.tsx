@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Building2, Search, Trash2 } from 'lucide-react';
 import { Company, SelectionProgress } from '../types/company';
 import { supabase, getCurrentUserId } from '../lib/supabase';
+import { showToast } from '../components/Toast';
 
 interface CompaniesListPageProps {
   onCompanySelect: (companyId: string) => void;
@@ -141,13 +142,13 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
       setShowAddModal(false);
     } catch (error) {
       console.error('Error adding company:', error);
-      alert('企業の追加に失敗しました');
+      showToast('企業の追加に失敗しました', 'error');
     }
   };
 
   const handleDeleteCompany = async (companyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('この企業を削除してもよろしいですか？')) return;
+    if (!confirm('この企業を削除しますか？')) return;
 
     try {
       const { error } = await supabase
@@ -160,7 +161,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
       setCompanies(companies.filter(c => c.id !== companyId));
     } catch (error) {
       console.error('Error deleting company:', error);
-      alert('企業の削除に失敗しました');
+      showToast('企業の削除に失敗しました', 'error');
     }
   };
 
@@ -200,7 +201,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
             <Building2 size={64} className="mb-4 opacity-30" />
             <p className="text-center">
-              {searchQuery ? '該当する企業が見つかりません' : '企業を追加してください'}
+              {searchQuery ? '検索結果がありません' : '企業を登録してノートを作成しましょう'}
             </p>
           </div>
         ) : (
@@ -249,7 +250,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
         )}
       </div>
 
-      {/* フローティングボタン */}
+      {/* 企業追加ボタン */}
       {!showAddModal && (
         <button
           onClick={() => setShowAddModal(true)}
@@ -271,7 +272,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
                 }}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
               >
-                ✕
+                ×
               </button>
             </div>
 
@@ -281,7 +282,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
                 type="text"
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
-                placeholder="例: 株式会社○○"
+                placeholder="例: 株式会社〇〇"
                 className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFA52F]"
                 autoFocus
                 onKeyPress={(e) => e.key === 'Enter' && handleAddCompany()}
