@@ -188,7 +188,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
-            placeholder="企業名で検索..."
+            placeholder="企業名で検索"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFA52F] focus:border-transparent"
@@ -201,7 +201,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
             <Building2 size={64} className="mb-4 opacity-30" />
             <p className="text-center">
-              {searchQuery ? '検索結果がありません' : '企業を登録してノートを作成しましょう'}
+              {searchQuery ? '該当する企業が見つかりません' : '企業を追加して就活ノートを始めましょう'}
             </p>
           </div>
         ) : (
@@ -272,7 +272,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
                 }}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
               >
-                ×
+                ✕
               </button>
             </div>
 
@@ -282,7 +282,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
                 type="text"
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
-                placeholder="例: 株式会社〇〇"
+                placeholder="例: 株式会社○○"
                 className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFA52F]"
                 autoFocus
                 onKeyPress={(e) => e.key === 'Enter' && handleAddCompany()}
@@ -304,7 +304,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
                 disabled={!newCompanyName.trim()}
                 className="flex-1 px-3 py-2 bg-[#FFA52F] text-white rounded-xl font-medium hover:bg-[#FF8F0F] disabled:opacity-50"
               >
-                追加
+                追加する
               </button>
             </div>
           </div>
