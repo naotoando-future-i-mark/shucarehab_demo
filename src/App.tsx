@@ -3,6 +3,7 @@ import { Router, Route, useRouter } from './router/Router';
 import BottomTab from './components/BottomTab';
 import FloatingButton from './components/FloatingButton';
 import Header from './components/Header';
+import { ToastContainer, useToasts } from './components/Toast';
 
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
@@ -12,6 +13,7 @@ import Companies from './pages/Companies';
 import Magazine from './pages/Magazine';
 import Create from './pages/Create';
 import Notes from './pages/Notes';
+import Memo from './pages/Memo';
 import CompanyDetail from './pages/CompanyDetail';
 import MyPage from './pages/MyPage';
 import Settings from './pages/Settings';
@@ -94,6 +96,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function AppInner() {
   const { currentPath } = useRouter();
   const [authed, setAuthed] = useState(false);
+  const { toasts, removeToast } = useToasts();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -165,6 +168,10 @@ function AppInner() {
           <Notes />
         </Route>
 
+        <Route path="/memo">
+          <Memo />
+        </Route>
+
         <Route path="/mypage">
           <MyPage />
         </Route>
@@ -178,6 +185,7 @@ function AppInner() {
       {authed && !hideHeader && <Header />}
       {authed && !hideBottomTab && <BottomTab />}
       {authed && showFloatingButton && <FloatingButton />}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }

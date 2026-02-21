@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, MapPin, Briefcase, Mail, Lock, ChevronRight, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { showToast } from '../components/Toast';
 import Header from '../components/Header';
 import BottomTab from '../components/BottomTab';
 
@@ -70,7 +71,7 @@ export default function MyPage() {
       }
     } catch (error) {
       console.error('プロフィール読み込みエラー:', error);
-      alert('プロフィールの読み込みに失敗しました');
+      showToast('プロフィールの読み込みに失敗しました', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -108,11 +109,11 @@ export default function MyPage() {
         if (error) throw error;
       }
 
-      alert('プロフィールを保存しました');
+      showToast('プロフィールを保存しました');
       setIsEditingProfile(false);
     } catch (error) {
       console.error('プロフィール保存エラー:', error);
-      alert('プロフィールの保存に失敗しました');
+      showToast('プロフィールの保存に失敗しました', 'error');
     }
   };
 
@@ -133,11 +134,11 @@ export default function MyPage() {
 
       if (error) throw error;
 
-      alert('希望勤務地を保存しました');
+      showToast('希望勤務地を保存しました');
       setIsEditingLocations(false);
     } catch (error) {
       console.error('勤務地保存エラー:', error);
-      alert('勤務地の保存に失敗しました');
+      showToast('勤務地の保存に失敗しました', 'error');
     }
   };
 
@@ -158,17 +159,17 @@ export default function MyPage() {
 
       if (error) throw error;
 
-      alert('興味のある業界を保存しました');
+      showToast('興味のある業界を保存しました');
       setIsEditingIndustries(false);
     } catch (error) {
       console.error('業界保存エラー:', error);
-      alert('業界の保存に失敗しました');
+      showToast('業界の保存に失敗しました', 'error');
     }
   };
 
   const updateEmail = async () => {
     if (!newEmail) {
-      alert('メールアドレスを入力してください');
+      showToast('メールアドレスを入力してください', 'error');
       return;
     }
 
@@ -176,28 +177,28 @@ export default function MyPage() {
       const { error } = await supabase.auth.updateUser({ email: newEmail });
       if (error) throw error;
 
-      alert('確認メールを送信しました。メールを確認して変更を完了してください。');
+      showToast('確認メールを送信しました。メールを確認して変更を完了してください。');
       setNewEmail('');
       setIsEditingEmail(false);
     } catch (error) {
       console.error('メールアドレス更新エラー:', error);
-      alert('メールアドレスの更新に失敗しました');
+      showToast('メールアドレスの更新に失敗しました', 'error');
     }
   };
 
   const updatePassword = async () => {
     if (!newPassword || !confirmPassword) {
-      alert('パスワードを入力してください');
+      showToast('パスワードを入力してください', 'error');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      alert('パスワードが一致しません');
+      showToast('パスワードが一致しません', 'error');
       return;
     }
 
     if (newPassword.length < 6) {
-      alert('パスワードは6文字以上で入力してください');
+      showToast('パスワードは6文字以上で入力してください', 'error');
       return;
     }
 
@@ -205,13 +206,13 @@ export default function MyPage() {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
-      alert('パスワードを更新しました');
+      showToast('パスワードを更新しました');
       setNewPassword('');
       setConfirmPassword('');
       setIsEditingPassword(false);
     } catch (error) {
       console.error('パスワード更新エラー:', error);
-      alert('パスワードの更新に失敗しました');
+      showToast('パスワードの更新に失敗しました', 'error');
     }
   };
 
@@ -340,13 +341,16 @@ export default function MyPage() {
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">卒業年度</label>
                   {isEditingProfile ? (
-                    <input
-                      type="number"
+                    <select
                       value={profile.graduation_year || ''}
                       onChange={(e) => setProfile({ ...profile, graduation_year: e.target.value ? parseInt(e.target.value) : null })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      placeholder="2026"
-                    />
+                    >
+                      <option value="">選択してください</option>
+                      {Array.from({ length: 41 }, (_, i) => 2000 + i).map(year => (
+                        <option key={year} value={year}>{year}年</option>
+                      ))}
+                    </select>
                   ) : (
                     <p className="text-gray-800">{profile.graduation_year ? `${profile.graduation_year}年` : '未設定'}</p>
                   )}

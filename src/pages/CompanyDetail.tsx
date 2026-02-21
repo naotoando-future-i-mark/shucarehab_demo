@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, ChevronUp, Pencil, Plus, Plane, Clock, TrendingDown, Gift, CheckCircle, Coffee, Monitor, Zap, Baby, Calendar, LucideIcon } from 'lucide-react';
 import { useRouter } from '../router/Router';
+import { supabase } from '../lib/supabase';
+import { MemoEditorModal } from '../components/jobhunting/MemoEditorModal';
+import { showToast } from '../components/Toast';
 
 type Company = {
   id: number;
@@ -42,6 +45,14 @@ type WhiteFeature = {
   level: WhiteLevel;
 };
 
+type CompanyMemo = {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  created_at: string;
+};
+
 const companyPoints = [
   '月給が初年度から50万円もらえる',
   '充実した研修制度で未経験でも安心',
@@ -55,13 +66,17 @@ export default function CompanyDetail() {
   const [openSections, setOpenSections] = useState<string[]>(['schedule']);
   const [internEvents, setInternEvents] = useState<InternEvent[]>([]);
   const [whiteFeatures, setWhiteFeatures] = useState<WhiteFeature[]>([]);
+  const [companyNoteId, setCompanyNoteId] = useState<string | null>(null);
+  const [memos, setMemos] = useState<CompanyMemo[]>([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMemo, setEditingMemo] = useState<{ category: string; title: string; content: string } | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('shukarehub_selected_company');
     if (stored) {
       const parsedCompany = JSON.parse(stored);
       setCompany(parsedCompany);
-      
+
       setInternEvents([
         {
           id: '1',
@@ -87,8 +102,106 @@ export default function CompanyDetail() {
         { id: '10', icon: Baby, label: '育児休暇', value: '女性90%\n男性50%', level: 'highest' },
       ];
       setWhiteFeatures(features);
+
+      loadCompanyNote(parsedCompany.name);
     }
   }, []);
+
+  const loadCompanyNote = async (companyName: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: companies } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', companyName)
+        .maybeSingle();
+
+      let companyId: string;
+
+      if (!companies) {
+        const { data: newCompany, error: companyError } = await supabase
+          .from('companies')
+          .insert({ user_id: user.id, name: companyName })
+          .select('id')
+          .single();
+
+        if (companyError) throw companyError;
+        companyId = newCompany.id;
+      } else {
+        companyId = companies.id;
+      }
+
+      const { data: note } = await supabase
+        .from('company_notes')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('company_id', companyId)
+        .maybeSingle();
+
+      if (!note) {
+        const { data: newNote, error: noteError } = await supabase
+          .from('company_notes')
+          .insert({ user_id: user.id, company_id: companyId })
+          .select('id')
+          .single();
+
+        if (noteError) throw noteError;
+        setCompanyNoteId(newNote.id);
+      } else {
+        setCompanyNoteId(note.id);
+        loadMemos(note.id);
+      }
+    } catch (error) {
+      console.error('企業ノート読み込みエラー:', error);
+    }
+  };
+
+  const loadMemos = async (noteId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('company_memos')
+        .select('*')
+        .eq('company_note_id', noteId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (data) setMemos(data);
+    } catch (error) {
+      console.error('メモ読み込みエラー:', error);
+    }
+  };
+
+  const handleAddMemo = (category: string, title: string) => {
+    setEditingMemo({ category, title, content: '' });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveMemo = async (content: string) => {
+    if (!companyNoteId || !editingMemo) return;
+
+    try {
+      const { error } = await supabase
+        .from('company_memos')
+        .insert({
+          company_note_id: companyNoteId,
+          title: editingMemo.title,
+          content,
+          category: editingMemo.category,
+        });
+
+      if (error) throw error;
+
+      showToast('メモを追加しました', 'success');
+      loadMemos(companyNoteId);
+      setEditingMemo(null);
+    } catch (error) {
+      console.error('メモ保存エラー:', error);
+      showToast('メモの追加に失敗しました', 'error');
+    }
+  };
 
   if (!company) {
     return (
@@ -102,7 +215,7 @@ export default function CompanyDetail() {
   }
 
   const toggleSection = (section: string) => {
-    setOpenSections(prev => 
+    setOpenSections(prev =>
       prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
     );
   };
@@ -151,6 +264,9 @@ export default function CompanyDetail() {
     }
   };
 
+  const getMemosByCategory = (category: string) => {
+    return memos.filter(m => m.category === category);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 pb-20">
@@ -316,26 +432,80 @@ export default function CompanyDetail() {
         {activeTab === 'memo' && (
           <div className="px-4 py-4 space-y-4">
             <div className="border rounded-lg p-4">
-              <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">基本情報</span>
-              <button className="w-full flex items-center justify-center gap-2 text-gray-600 py-2">
-                <Pencil size={16} /><span>基本情報を編集する</span>
-              </button>
-            </div>
-            <div className="border rounded-lg p-4">
               <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">企業研究</span>
-              <button className="w-full flex items-center justify-center gap-2 text-gray-600 py-2">
+              {getMemosByCategory('research').length > 0 ? (
+                <div className="space-y-2">
+                  {getMemosByCategory('research').map((memo) => (
+                    <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
+                      <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <button
+                onClick={() => handleAddMemo('research', '企業研究')}
+                className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
+              >
                 <Plus size={16} /><span>企業研究を追加する</span>
               </button>
             </div>
+
             <div className="border rounded-lg p-4">
               <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">面接対策</span>
-              <button className="w-full flex items-center justify-center gap-2 text-gray-600 py-2">
+              {getMemosByCategory('interview').length > 0 ? (
+                <div className="space-y-2">
+                  {getMemosByCategory('interview').map((memo) => (
+                    <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
+                      <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <button
+                onClick={() => handleAddMemo('interview', '面接対策')}
+                className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
+              >
                 <Plus size={16} /><span>面接対策を追加する</span>
+              </button>
+            </div>
+
+            <div className="border rounded-lg p-4">
+              <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">ES対策</span>
+              {getMemosByCategory('es').length > 0 ? (
+                <div className="space-y-2">
+                  {getMemosByCategory('es').map((memo) => (
+                    <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
+                      <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <button
+                onClick={() => handleAddMemo('es', 'ES対策')}
+                className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
+              >
+                <Plus size={16} /><span>ES対策を追加する</span>
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {editingMemo && (
+        <MemoEditorModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingMemo(null);
+          }}
+          title={editingMemo.title}
+          initialContent={editingMemo.content}
+          onSave={handleSaveMemo}
+        />
+      )}
     </div>
   );
 }
