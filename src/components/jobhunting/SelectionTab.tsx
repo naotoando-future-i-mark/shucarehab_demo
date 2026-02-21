@@ -8,7 +8,7 @@ interface SelectionTabProps {
   companyName: string;
   events: SelectionEvent[];
   progress: SelectionProgress[];
-  onAddEvent: (event: Omit<SelectionEvent, 'id' | 'created_at' | 'updated_at'>) => string | null;
+  onAddEvent: (event: Omit<SelectionEvent, 'id' | 'created_at' | 'updated_at'>) => Promise<string | null>;
   onUpdateEvent: (eventId: string, updates: Partial<SelectionEvent>) => void;
   onDeleteEvent: (eventId: string) => void;
   onAddProgress: (progress: Omit<SelectionProgress, 'id' | 'created_at' | 'updated_at'>) => void;
@@ -51,10 +51,10 @@ export const SelectionTab = ({
   const currentTrackEvents = events.filter((e) => e.track_type === selectedTrack);
   const currentTrackProgress = progress.filter((p) => p.track_type === selectedTrack);
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
     if (!eventFormData.title.trim()) return;
 
-    onAddEvent({
+    await onAddEvent({
       company_note_id: companyNoteId,
       track_type: selectedTrack,
       event_type: eventFormData.event_type,
