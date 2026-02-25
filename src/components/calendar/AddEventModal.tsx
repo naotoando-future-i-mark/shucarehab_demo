@@ -61,7 +61,6 @@ export const AddEventModal = ({
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  // 編集時のデータ読み込み
   useEffect(() => {
     console.log('AddEventModal useEffect - editingEvent:', editingEvent, 'isOpen:', isOpen);
     if (editingEvent) {
@@ -120,7 +119,6 @@ export const AddEventModal = ({
     }
   }, [editingEvent, initialDate, isOpen, colorPresets]);
 
-  // 終日切り替え
   const handleAllDayToggle = () => {
     const newAllDay = !allDay;
     setAllDay(newAllDay);
@@ -140,7 +138,6 @@ export const AddEventModal = ({
     }
   };
 
-  // 開始日時変更時に終了日時も調整
   const handleStartDateChange = (newStartDate: string) => {
     setStartDate(newStartDate);
     if (!allDay && newStartDate && startDate && endDate) {
@@ -162,15 +159,6 @@ export const AddEventModal = ({
     }
 
     const finalColorId = colorId || (colorPresets.length > 0 ? colorPresets[0].id : '');
-
-    console.log('Preparing to save event with data:', {
-      title,
-      startDate,
-      endDate,
-      colorId: finalColorId,
-      eventType,
-      companyName,
-    });
 
     const eventData: Omit<Event, 'id'> = {
       title,
@@ -203,14 +191,9 @@ export const AddEventModal = ({
       })) : undefined,
     };
 
-    console.log('Event data prepared:', eventData);
-
-    // idが空文字または存在しない場合は新規作成として扱う
     if (editingEvent && editingEvent.id && onUpdate) {
-      console.log('Updating event:', editingEvent.id);
       onUpdate({ ...eventData, id: editingEvent.id });
     } else {
-      console.log('Creating new event');
       onSave(eventData);
     }
     handleClose();
@@ -249,7 +232,6 @@ export const AddEventModal = ({
     onClose();
   };
 
-  // ドラッグで閉じる
   const handleTouchStart = (e: React.TouchEvent) => setStartY(e.touches[0].clientY);
   const handleTouchMove = (e: React.TouchEvent) => {
     if (startY !== null) {
@@ -287,7 +269,7 @@ export const AddEventModal = ({
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black bg-opacity-50" onClick={handleClose}>
       <div
-        className="w-full max-w-2xl bg-white rounded-t-3xl shadow-2xl max-h-[95vh] flex flex-col transition-transform border-t-2 border-[#FFA52F]/40 overflow-hidden"
+        className="w-full max-w-md bg-white rounded-t-3xl shadow-2xl max-h-[95vh] flex flex-col transition-transform border-t-2 border-[#FFA52F]/40 overflow-hidden"
         style={{ transform: currentY ? `translateY(${currentY}px)` : 'translateY(0)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -445,7 +427,6 @@ export const AddEventModal = ({
 
             {/* 締切・対策日 */}
             <div className="relative px-6 py-5 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100/70">
-              {/* 応募締切 */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-gradient-to-br from-red-50 to-red-100 rounded-xl shadow-md">
@@ -469,7 +450,6 @@ export const AddEventModal = ({
                 />
               )}
 
-              {/* 選考対策日 */}
               <div className="border-t-2 border-white/80 pt-4 mt-2">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
