@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Router, Route, useRouter } from './router/Router';
 import BottomTab from './components/BottomTab';
-import FloatingButton from './components/FloatingButton';
 import Header from './components/Header';
 import { ToastContainer, useToasts } from './components/Toast';
 
@@ -121,9 +120,6 @@ function AppInner() {
     currentPath === '/update-password' ||
     currentPath === '/calendar';
 
-  // FloatingButtonは使わない
-  const showFloatingButton = false;
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ログイン */}
@@ -179,7 +175,6 @@ function AppInner() {
       {/* ログイン後のみ表示 */}
       {authed && !hideHeader && <Header />}
       {authed && !hideBottomTab && <BottomTab />}
-      {authed && showFloatingButton && <FloatingButton />}
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
