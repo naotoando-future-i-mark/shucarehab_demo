@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Palette, Clock, Building2, AlertCircle, Video, MapPin, Plus, Trash2, Repeat, FileText, Bell, Briefcase } from 'lucide-react';
+import { Palette, Clock, Building2, AlertCircle, Video, MapPin, Plus, Trash2, Repeat, FileText, Bell, Briefcase, X } from 'lucide-react';
 import { Event, NotificationConfig } from '../../types/event';
 import { ColorPreset } from '../../data/colorPresets';
 import { ColorPickerModal } from './ColorPickerModal';
