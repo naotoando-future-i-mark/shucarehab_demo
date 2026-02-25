@@ -609,118 +609,27 @@ export const AddEventModal = ({
       </div>
 
       {/* サブモーダル - createPortalでbody直下に出す */}
-       {showColorPicker && createPortal(
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 999999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              backgroundColor: 'rgba(0,0,0,0.4)',
-            }}
-            onClick={() => setShowColorPicker(false)}
-          />
-          <div
-            style={{
-              position: 'relative',
-              width: 'calc(100% - 32px)',
-              maxWidth: '448px',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ColorPickerModal
-              isOpen={showColorPicker}
-              onClose={() => setShowColorPicker(false)}
-              selectedColorId={colorId}
-              onSelect={setColorId}
-              colorPresets={colorPresets}
-              onUpdateLabels={onUpdateColorPresets}
-            />
-          </div>
-        </div>,
-        document.body
-            {showColorPicker && createPortal(
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 999999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              backgroundColor: 'rgba(0,0,0,0.4)',
-            }}
-            onClick={() => setShowColorPicker(false)}
-          />
-          <div
-            style={{
-              position: 'relative',
-              width: 'calc(100% - 32px)',
-              maxWidth: '448px',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+             {showColorPicker && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowColorPicker(false)} />
+          <div style={{ position: 'relative', width: 'calc(100% - 32px)', maxWidth: '448px' }} onClick={(e) => e.stopPropagation()}>
             <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <div className="w-16" />
-                <h3 className="text-base font-semibold text-gray-800">予定カラーリスト</h3>
+                <h3 className="text-base font-semibold text-gray-800">テスト：予定カラーリスト</h3>
                 <button onClick={() => setShowColorPicker(false)} className="p-1 text-gray-400 hover:text-gray-600">
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-4 space-y-1">
-                {colorPresets.length === 0 ? (
-                  <div className="py-8 text-center text-gray-400 text-sm">カラーがありません</div>
-                ) : (
-                  colorPresets.map(preset => (
-                    <button
-                      key={preset.id}
-                      onClick={() => { setColorId(preset.id); setShowColorPicker(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
-                        colorId === preset.id ? 'bg-orange-50' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-lg flex-shrink-0 ${colorId === preset.id ? 'ring-2 ring-[#FFA52F] ring-offset-1' : ''}`}
-                        style={{ backgroundColor: preset.color }}
-                      />
-                      <span className="text-sm font-medium text-gray-800">{preset.label}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-              <div className="p-4 border-t border-gray-100">
-                <button className="w-full py-2.5 bg-gradient-to-r from-[#FFA52F] to-[#FF8C00] text-white text-sm font-semibold rounded-xl">
-                  カラー管理
-                </button>
+              <div className="p-4">
+                <div className="py-8 text-center text-gray-400 text-sm">テスト中 - これは中央に見える？</div>
               </div>
             </div>
           </div>
         </div>,
         document.body
       )}
+
 
 
 
