@@ -236,33 +236,46 @@ export const ColorPickerModal = ({
     );
   };
 
-  const modalContent = (
-    <>
-      {/* 背景オーバーレイ */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-40"
-        style={{ zIndex: 99998 }}
-        onClick={handleClose}
-      />
-      {/* モーダル本体 - top/left/transformで絶対中央 */}
+  // AddEventModal側でcreatePortalしてるので、ここではしない
+  // ただしNotificationModalと同じ構造にする
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 99990,
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* 背景 */}
       <div
         style={{
-          position: 'fixed',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.4)',
+        }}
+        onClick={handleClose}
+      />
+      {/* 中央配置 */}
+      <div
+        style={{
+          position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          zIndex: 99999,
-          width: '100%',
+          width: 'calc(100% - 32px)',
           maxWidth: '448px',
-          padding: '0 16px',
-          boxSizing: 'border-box',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {renderContent()}
       </div>
-    </>
+    </div>
   );
-
-  return modalContent;
 };
