@@ -264,5 +264,5 @@ export const ColorPickerModal = ({
     </>
   );
 
-  return createPortal(modalContent, document.body);
+  return modalContent;
 };
