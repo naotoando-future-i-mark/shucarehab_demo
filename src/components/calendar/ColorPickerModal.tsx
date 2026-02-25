@@ -236,5 +236,6 @@ export const ColorPickerModal = ({
     );
   };
 
-    return renderContent();
+  return renderContent();
 
+};
