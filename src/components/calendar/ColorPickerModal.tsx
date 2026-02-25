@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { ColorPreset } from '../../data/colorPresets';
 
@@ -100,13 +101,12 @@ export const ColorPickerModal = ({
     setView('select');
   };
 
-  // 全画面を覆うポータル的なラッパー（イベント伝搬を止める）
-  return (
-    <div className="fixed inset-0 z-[100]" onClick={(e) => e.stopPropagation()}>
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999]" onClick={(e) => e.stopPropagation()}>
       {/* 背景オーバーレイ */}
       <div className="absolute inset-0 bg-black bg-opacity-40" onClick={handleClose} />
 
-      {/* モーダル本体を中央配置 */}
+      {/* 中央配置コンテナ */}
       <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
         <div className="w-full max-w-md pointer-events-auto" onClick={(e) => e.stopPropagation()}>
 
@@ -200,7 +200,7 @@ export const ColorPickerModal = ({
             </div>
           )}
 
-          {/* ── 選択画面（メイン） ── */}
+          {/* ── 選択画面 ── */}
           {view === 'select' && (
             <div className="bg-white rounded-2xl shadow-2xl max-h-[70vh] flex flex-col overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -246,4 +246,7 @@ export const ColorPickerModal = ({
       </div>
     </div>
   );
+
+  // createPortalでbody直下にレンダリング → 親のtransformの影響を受けない
+  return createPortal(modalContent, document.body);
 };
