@@ -142,13 +142,13 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
       setShowAddModal(false);
     } catch (error) {
       console.error('Error adding company:', error);
-      showToast('企業の追加に失敗しました', 'error');
+      showToast('', 'error');
     }
   };
 
   const handleDeleteCompany = async (companyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('この企業を削除しますか？')) return;
+    if (!confirm('')) return;
 
     try {
       const { error } = await supabase
@@ -161,7 +161,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
       setCompanies(companies.filter(c => c.id !== companyId));
     } catch (error) {
       console.error('Error deleting company:', error);
-      showToast('企業の削除に失敗しました', 'error');
+      showToast('', 'error');
     }
   };
 
@@ -172,7 +172,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-gray-600">読み込み中...</div>
+        <div className="text-gray-600">...</div>
       </div>
     );
   }
@@ -201,7 +201,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
             <Building2 size={64} className="mb-4 opacity-30" />
             <p className="text-center">
-              {searchQuery ? '該当する企業が見つかりません' : '企業を追加して就活ノートを始めましょう'}
+              {searchQuery ? '該当する企業がありません' : '企業を追加して就活ノートを始めましょう'}
             </p>
           </div>
         ) : (
@@ -223,7 +223,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
                     </p>
                     {company.latestProgress && (
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className="text-xs font-medium text-gray-600">選考状況:</span>
+                        <span className="text-xs font-medium text-gray-600">選考:</span>
                         <span className={`text-xs px-2.5 py-1 rounded-full font-semibold shadow-sm ${
                           company.latestProgress.trackType === 'intern'
                             ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
@@ -250,14 +250,18 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
         )}
       </div>
 
-      {/* 企業追加ボタン */}
+      {/* +ボタン（スマホ幅に合わせて中央寄せ） */}
       {!showAddModal && (
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="fixed bottom-20 right-4 w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center z-40 bg-gradient-to-r from-[#FFA52F] to-[#FF8C00] hover:shadow-xl transition-shadow"
-        >
-          <Plus size={28} />
-        </button>
+        <div className="fixed bottom-20 left-0 right-0 z-40 pointer-events-none">
+          <div className="max-w-md mx-auto relative">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="absolute bottom-0 right-4 w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center pointer-events-auto bg-gradient-to-r from-[#FFA52F] to-[#FF8C00] hover:shadow-xl transition-shadow"
+            >
+              <Plus size={28} />
+            </button>
+          </div>
+        </div>
       )}
 
       {showAddModal && (
@@ -304,7 +308,7 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
                 disabled={!newCompanyName.trim()}
                 className="flex-1 px-3 py-2 bg-[#FFA52F] text-white rounded-xl font-medium hover:bg-[#FF8F0F] disabled:opacity-50"
               >
-                追加する
+                追加
               </button>
             </div>
           </div>
