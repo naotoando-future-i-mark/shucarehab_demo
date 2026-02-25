@@ -89,8 +89,8 @@ export const NotificationModal = ({ isOpen, onClose, notifications, onSave }: No
   // カスタム通知追加画面
   if (showCustom) {
     return (
-      <div className="fixed inset-0 bg-black/40 z-[70] flex items-end" onClick={handleClose}>
-        <div className="bg-white w-full rounded-t-3xl shadow-2xl flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 bg-black/40 z-[70] flex items-end justify-center" onClick={handleClose}>
+        <div className="bg-white w-full max-w-md rounded-t-3xl shadow-2xl flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <button onClick={() => setShowCustom(false)} className="p-2 hover:bg-gray-100 rounded-full">
               <X className="w-5 h-5 text-gray-600" />
@@ -174,8 +174,8 @@ export const NotificationModal = ({ isOpen, onClose, notifications, onSave }: No
 
   // メイン画面
   return (
-    <div className="fixed inset-0 bg-black/40 z-[70] flex items-end" onClick={handleClose}>
-      <div className="bg-white w-full rounded-t-3xl shadow-2xl flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 z-[70] flex items-end justify-center" onClick={handleClose}>
+      <div className="bg-white w-full max-w-md rounded-t-3xl shadow-2xl flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <div className="w-10" />
           <span className="px-4 py-1.5 text-sm font-medium text-gray-600 bg-gray-200 rounded-full">
