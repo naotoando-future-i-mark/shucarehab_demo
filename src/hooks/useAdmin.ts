@@ -11,6 +11,7 @@ export function useAdmin() {
     const checkAdmin = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        console.log('useAdmin: user =', user?.id);
         if (!user) {
           if (mounted) {
             setIsAdmin(false);
@@ -24,6 +25,7 @@ export function useAdmin() {
           .select('user_id')
           .eq('user_id', user.id)
           .maybeSingle();
+        console.log('useAdmin: admin query result =', { data, error });
 
         if (mounted) {
           setIsAdmin(!error && data !== null);
