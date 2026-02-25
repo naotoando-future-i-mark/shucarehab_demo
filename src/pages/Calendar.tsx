@@ -406,14 +406,15 @@ const handleUpdateColorPresets = async (presets: ColorPreset[]) => {
     );
   }
 
-  const menuItems = [
-    { path: '/calendar', icon: '📅', label: 'カレンダー' },
-    { path: '/companies', icon: '🏢', label: '企業を探す' },
-    { path: '/magazine', icon: '📰', label: '就活マガジン' },
-    { path: '/memo', icon: '📝', label: '就活ノート' },
-    { path: '/mypage', icon: '👤', label: 'マイページ' },
-    { path: '/settings', icon: '⚙️', label: '設定' },
-  ];
+const menuItems = [
+  { path: '/calendar', icon: '📅', label: 'カレンダー' },
+  { path: '/companies', icon: '🏢', label: '企業を探す' },
+  { path: '/magazine', icon: '📰', label: '就活マガジン' },
+  { path: '/notes', icon: '📝', label: '就活ノート' },
+  { path: '/mypage', icon: '👤', label: 'マイページ' },
+  { path: '/settings', icon: '⚙️', label: '設定' },
+];
+
 
   const handleNavigate = (path: string) => {
     setIsMenuOpen(false);
