@@ -16,6 +16,13 @@ import CompanyDetail from './pages/CompanyDetail';
 import MyPage from './pages/MyPage';
 import Settings from './pages/Settings';
 import { supabase } from './lib/supabase';
+import AdminGuard from './components/admin/AdminGuard';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminCompanies from './pages/admin/AdminCompanies';
+import AdminMagazine from './pages/admin/AdminMagazine';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminNotifications from './pages/admin/AdminNotifications';
+import AdminTags from './pages/admin/AdminTags';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { currentPath, navigate } = useRouter();
@@ -108,17 +115,21 @@ function AppInner() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const isAdminPath = currentPath.startsWith('/admin');
+
   const hideBottomTab =
     currentPath === '/login' ||
     currentPath === '/reset-password' ||
     currentPath === '/update-password' ||
-    currentPath === '/magazine/new';
+    currentPath === '/magazine/new' ||
+    isAdminPath;
 
   const hideHeader =
     currentPath === '/login' ||
     currentPath === '/reset-password' ||
     currentPath === '/update-password' ||
-    currentPath === '/calendar';
+    currentPath === '/calendar' ||
+    isAdminPath;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -169,6 +180,25 @@ function AppInner() {
 
         <Route path="/settings">
           <Settings />
+        </Route>
+
+        <Route path="/admin">
+          <AdminGuard><AdminDashboard /></AdminGuard>
+        </Route>
+        <Route path="/admin/companies">
+          <AdminGuard><AdminCompanies /></AdminGuard>
+        </Route>
+        <Route path="/admin/magazine">
+          <AdminGuard><AdminMagazine /></AdminGuard>
+        </Route>
+        <Route path="/admin/users">
+          <AdminGuard><AdminUsers /></AdminGuard>
+        </Route>
+        <Route path="/admin/notifications">
+          <AdminGuard><AdminNotifications /></AdminGuard>
+        </Route>
+        <Route path="/admin/tags">
+          <AdminGuard><AdminTags /></AdminGuard>
         </Route>
       </RequireAuth>
 
