@@ -35,6 +35,7 @@ export default function Login() {
         email,
         password,
       });
+      console.log('Login result:', { data, error });
 
       if (error) {
         if (error.message.includes('Email not confirmed')) {
