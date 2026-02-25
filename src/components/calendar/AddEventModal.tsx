@@ -609,26 +609,43 @@ export const AddEventModal = ({
       </div>
 
       {/* サブモーダル - createPortalでbody直下に出す */}
-      {showColorPicker && createPortal(
-  <div style={{
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100vw',
-    height: '100vh',
-    backgroundColor: 'red',
-    zIndex: 999999,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  }}>
-    <div style={{ background: 'white', padding: 40, borderRadius: 16 }}>
-      <h1>テスト - これは中央に見える？</h1>
-      <button onClick={() => setShowColorPicker(false)}>閉じる</button>
-    </div>
-  </div>,
-  document.body
-)}
+            {showColorPicker && createPortal(
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0,0,0,0.4)',
+            }}
+            onClick={() => setShowColorPicker(false)}
+          />
+          <div style={{ position: 'relative', width: 'calc(100% - 32px)', maxWidth: '448px' }}>
+            <ColorPickerModal
+              isOpen={showColorPicker}
+              onClose={() => setShowColorPicker(false)}
+              selectedColorId={colorId}
+              onSelect={setColorId}
+              colorPresets={colorPresets}
+              onUpdateLabels={onUpdateColorPresets}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+
 
       {showRecurrenceModal && createPortal(
         <RecurrenceModal
