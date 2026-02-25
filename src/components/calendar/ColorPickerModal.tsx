@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { ColorPreset } from '../../data/colorPresets';
 
@@ -101,141 +100,136 @@ export const ColorPickerModal = ({
     setView('select');
   };
 
-  const renderContent = () => {
-    if (view === 'add') {
-      return (
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <button onClick={() => setView('edit')} className="text-sm text-gray-500">キャンセル</button>
-            <h3 className="text-base font-semibold text-gray-800">カラー追加</h3>
-            <button onClick={handleAddNew} className="text-sm font-semibold text-[#FFA52F]">追加</button>
-          </div>
-          <div className="p-4 space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">ラベル名</label>
-              <input
-                type="text"
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                placeholder="例: 最終面接"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FFA52F]/50"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">カラー選択</label>
-              <div className="grid grid-cols-5 gap-3">
-                {DEFAULT_COLORS.map(color => (
-                  <button
-                    key={color}
-                    onClick={() => setNewColor(color)}
-                    className={`w-full aspect-square rounded-xl transition-all ${newColor === color ? 'ring-3 ring-[#FFA52F] ring-offset-2 scale-105' : 'hover:scale-105'}`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (view === 'edit') {
-      return (
-        <div className="bg-white rounded-2xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <button onClick={() => setView('select')} className="text-sm text-gray-500">キャンセル</button>
-            <h3 className="text-base font-semibold text-gray-800">カラー管理</h3>
-            <button onClick={handleSaveLabels} className="text-sm font-semibold text-[#FFA52F]">保存</button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {editedPresets.map(preset => (
-              <div key={preset.id} className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setEditingColorId(editingColorId === preset.id ? null : preset.id)}
-                    className="w-10 h-10 rounded-xl flex-shrink-0 border-2 border-white shadow-md"
-                    style={{ backgroundColor: preset.color }}
-                  />
-                  <input
-                    type="text"
-                    value={preset.label}
-                    onChange={(e) => handleLabelChange(preset.id, e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FFA52F]/50"
-                  />
-                  <button onClick={() => handleDelete(preset.id)} className="p-2 text-red-400 hover:text-red-600">
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-                {editingColorId === preset.id && (
-                  <div className="grid grid-cols-5 gap-2 pl-13 pb-2">
-                    {DEFAULT_COLORS.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => handleColorChange(preset.id, color)}
-                        className={`w-full aspect-square rounded-lg transition-all ${preset.color === color ? 'ring-2 ring-[#FFA52F] ring-offset-1 scale-105' : ''}`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="p-4 border-t border-gray-100">
-            <button
-              onClick={() => setView('add')}
-              className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-[#FFA52F] hover:text-[#FFA52F] transition-colors"
-            >
-              <Plus size={18} />
-              <span className="text-sm font-medium">新しいカラーを追加</span>
-            </button>
-          </div>
-        </div>
-      );
-    }
-
+  if (view === 'add') {
     return (
-      <div className="bg-white rounded-2xl shadow-2xl max-h-[70vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl overflow-hidden" style={{ width: '100%' }}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <div className="w-16" />
-          <h3 className="text-base font-semibold text-gray-800">予定カラーリスト</h3>
-          <button onClick={handleClose} className="p-1 text-gray-400 hover:text-gray-600">
-            <X size={20} />
-          </button>
+          <button onClick={() => setView('edit')} className="text-sm text-gray-500 w-16 text-left">キャンセル</button>
+          <h3 className="text-base font-semibold text-gray-800">カラー追加</h3>
+          <button onClick={handleAddNew} className="text-sm font-semibold text-[#FFA52F] w-16 text-right">追加</button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-1">
-          {colorPresets.length === 0 ? (
-            <div className="py-8 text-center text-gray-400 text-sm">カラーがありません</div>
-          ) : (
-            colorPresets.map(preset => (
-              <button
-                key={preset.id}
-                onClick={() => handleSelect(preset)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
-                  selectedColorId === preset.id ? 'bg-orange-50' : 'hover:bg-gray-50'
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-lg flex-shrink-0 ${selectedColorId === preset.id ? 'ring-2 ring-[#FFA52F] ring-offset-1' : ''}`}
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">ラベル名</label>
+            <input
+              type="text"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder="例: 最終面接"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FFA52F]/50"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">カラー選択</label>
+            <div className="grid grid-cols-5 gap-3">
+              {DEFAULT_COLORS.map(color => (
+                <button
+                  key={color}
+                  onClick={() => setNewColor(color)}
+                  className={`w-full aspect-square rounded-xl transition-all ${newColor === color ? 'ring-3 ring-[#FFA52F] ring-offset-2 scale-105' : 'hover:scale-105'}`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'edit') {
+    return (
+      <div className="bg-white rounded-2xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden" style={{ width: '100%' }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <button onClick={() => setView('select')} className="text-sm text-gray-500 w-16 text-left">キャンセル</button>
+          <h3 className="text-base font-semibold text-gray-800">カラー管理</h3>
+          <button onClick={handleSaveLabels} className="text-sm font-semibold text-[#FFA52F] w-16 text-right">保存</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {editedPresets.map(preset => (
+            <div key={preset.id} className="space-y-2">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setEditingColorId(editingColorId === preset.id ? null : preset.id)}
+                  className="w-10 h-10 rounded-xl flex-shrink-0 border-2 border-white shadow-md"
                   style={{ backgroundColor: preset.color }}
                 />
-                <span className="text-sm font-medium text-gray-800">{preset.label}</span>
-              </button>
-            ))
-          )}
+                <input
+                  type="text"
+                  value={preset.label}
+                  onChange={(e) => handleLabelChange(preset.id, e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FFA52F]/50"
+                />
+                <button onClick={() => handleDelete(preset.id)} className="p-2 text-red-400 hover:text-red-600">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+              {editingColorId === preset.id && (
+                <div className="grid grid-cols-5 gap-2 pl-14 pb-2">
+                  {DEFAULT_COLORS.map(color => (
+                    <button
+                      key={color}
+                      onClick={() => handleColorChange(preset.id, color)}
+                      className={`w-full aspect-square rounded-lg transition-all ${preset.color === color ? 'ring-2 ring-[#FFA52F] ring-offset-1 scale-105' : ''}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
         <div className="p-4 border-t border-gray-100">
           <button
-            onClick={() => setView('edit')}
-            className="w-full py-2.5 bg-gradient-to-r from-[#FFA52F] to-[#FF8C00] text-white text-sm font-semibold rounded-xl hover:shadow-md transition-shadow"
+            onClick={() => setView('add')}
+            className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-[#FFA52F] hover:text-[#FFA52F] transition-colors"
           >
-            カラー管理
+            <Plus size={18} />
+            <span className="text-sm font-medium">新しいカラーを追加</span>
           </button>
         </div>
       </div>
     );
-  };
+  }
 
-  return renderContent();
-
+  return (
+    <div className="bg-white rounded-2xl shadow-2xl max-h-[70vh] flex flex-col overflow-hidden" style={{ width: '100%' }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="w-8" />
+        <h3 className="text-base font-semibold text-gray-800">予定カラーリスト</h3>
+        <button onClick={handleClose} className="p-1 text-gray-400 hover:text-gray-600">
+          <X size={20} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+        {colorPresets.length === 0 ? (
+          <div className="py-8 text-center text-gray-400 text-sm">カラーがありません</div>
+        ) : (
+          colorPresets.map(preset => (
+            <button
+              key={preset.id}
+              onClick={() => handleSelect(preset)}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+                selectedColorId === preset.id ? 'bg-orange-50' : 'hover:bg-gray-50'
+              }`}
+            >
+              <div
+                className={`w-8 h-8 rounded-lg flex-shrink-0 ${selectedColorId === preset.id ? 'ring-2 ring-[#FFA52F] ring-offset-1' : ''}`}
+                style={{ backgroundColor: preset.color }}
+              />
+              <span className="text-sm font-medium text-gray-800">{preset.label}</span>
+            </button>
+          ))
+        )}
+      </div>
+      <div className="p-4 border-t border-gray-100">
+        <button
+          onClick={() => setView('edit')}
+          className="w-full py-2.5 bg-gradient-to-r from-[#FFA52F] to-[#FF8C00] text-white text-sm font-semibold rounded-xl hover:shadow-md transition-shadow"
+        >
+          カラー管理
+        </button>
+      </div>
+    </div>
+  );
 };
