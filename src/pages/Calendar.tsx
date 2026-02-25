@@ -357,44 +357,46 @@ export default function Calendar() {
   };
 
   // ★修正: preset_id を追加（NOT NULL制約対応）
-  const handleUpdateColorPresets = async (presets: ColorPreset[]) => {
-    try {
-      const userId = await getCurrentUserId();
-      if (!userId) return;
+const handleUpdateColorPresets = async (presets: ColorPreset[]) => {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
 
-      await supabase.from('color_presets').delete().eq('user_id', userId);
+    // 既存を全削除
+    const { error: deleteError } = await supabase
+      .from('color_presets')
+      .delete()
+      .eq('user_id', userId);
 
-      const presetsWithOrder = presets.map((preset, index) => {
-        const cleanPreset: any = {
-          preset_id: preset.id.startsWith('temp-')
-            ? `custom_${Date.now()}_${index}`
-            : (preset as any).preset_id || preset.id,
-          label: preset.label,
-          color: preset.color,
-          order_index: index,
-          user_id: userId,
-        };
-        if (!preset.id.startsWith('temp-')) {
-          cleanPreset.id = preset.id;
-        }
-        return cleanPreset;
-      });
+    if (deleteError) throw deleteError;
 
-      const { data, error } = await supabase
-        .from('color_presets')
-        .insert(presetsWithOrder)
-        .select();
+    // 全部新規INSERTする（idは自動生成に任せる）
+    const presetsToInsert = presets.map((preset, index) => ({
+      preset_id: preset.id.startsWith('temp-')
+        ? `custom_${Date.now()}_${index}`
+        : (preset as any).preset_id || `preset_${index}`,
+      label: preset.label,
+      color: preset.color,
+      order_index: index,
+      user_id: userId,
+    }));
 
-      if (error) throw error;
+    const { data, error } = await supabase
+      .from('color_presets')
+      .insert(presetsToInsert)
+      .select();
 
-      if (data) {
-        setColorPresets(data);
-      }
-    } catch (error) {
-      console.error('Error updating color presets:', error);
-      alert('カラープリセットの更新に失敗しました');
+    if (error) throw error;
+
+    if (data) {
+      setColorPresets(data);
     }
-  };
+  } catch (error) {
+    console.error('Error updating color presets:', error);
+    alert('カラープリセットの更新に失敗しました');
+  }
+};
+
 
   if (loading) {
     return (
