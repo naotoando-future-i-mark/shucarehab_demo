@@ -182,23 +182,15 @@ function AppInner() {
           <Settings />
         </Route>
 
-        <Route path="/admin">
-          <AdminGuard><AdminDashboard /></AdminGuard>
-        </Route>
-        <Route path="/admin/companies">
-          <AdminGuard><AdminCompanies /></AdminGuard>
-        </Route>
-        <Route path="/admin/magazine">
-          <AdminGuard><AdminMagazine /></AdminGuard>
-        </Route>
-        <Route path="/admin/users">
-          <AdminGuard><AdminUsers /></AdminGuard>
-        </Route>
-        <Route path="/admin/notifications">
-          <AdminGuard><AdminNotifications /></AdminGuard>
-        </Route>
-        <Route path="/admin/tags">
-          <AdminGuard><AdminTags /></AdminGuard>
+        <Route path="/admin" prefix>
+          <AdminGuard>
+            <Route path="/admin"><AdminDashboard /></Route>
+            <Route path="/admin/companies"><AdminCompanies /></Route>
+            <Route path="/admin/magazine"><AdminMagazine /></Route>
+            <Route path="/admin/users"><AdminUsers /></Route>
+            <Route path="/admin/notifications"><AdminNotifications /></Route>
+            <Route path="/admin/tags"><AdminTags /></Route>
+          </AdminGuard>
         </Route>
       </RequireAuth>
 

@@ -53,12 +53,14 @@ export function useRouter() {
 
 interface RouteProps {
   path: string;
+  prefix?: boolean;
   children: ReactNode;
 }
 
-export function Route({ path, children }: RouteProps) {
+export function Route({ path, prefix, children }: RouteProps) {
   const { currentPath } = useRouter();
   const a = normalizePath(currentPath);
   const b = normalizePath(path);
-  return a === b ? <>{children}</> : null;
+  const matched = prefix ? a === b || a.startsWith(b + '/') : a === b;
+  return matched ? <>{children}</> : null;
 }
