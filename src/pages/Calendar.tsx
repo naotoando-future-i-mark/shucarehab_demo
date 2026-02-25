@@ -61,14 +61,12 @@ export default function Calendar() {
   };
 
   const initializeDefaultColorPresets = async (userId: string) => {
-    // React Strict Mode での重複実行を防ぐ
     if (isInitializingPresets.current) {
       return;
     }
     isInitializingPresets.current = true;
 
     try {
-      // 挿入前に再度チェック
       const { data: existingPresets } = await supabase
         .from('color_presets')
         .select('*')
@@ -79,17 +77,18 @@ export default function Calendar() {
         return;
       }
 
-      const defaultPresets: Omit<ColorPreset, 'id' | 'created_at' | 'updated_at'>[] = [
-        { user_id: userId, label: '説明会', color: '#FF9500', order_index: 0 },
-        { user_id: userId, label: '面接', color: '#007AFF', order_index: 1 },
-        { user_id: userId, label: 'ES締切', color: '#FF3B30', order_index: 2 },
-        { user_id: userId, label: '筆記試験', color: '#5856D6', order_index: 3 },
-        { user_id: userId, label: 'GD', color: '#34C759', order_index: 4 },
-        { user_id: userId, label: 'インターン', color: '#FF2D55', order_index: 5 },
-        { user_id: userId, label: 'OB訪問', color: '#00C7BE', order_index: 6 },
-        { user_id: userId, label: '内定式', color: '#FFD60A', order_index: 7 },
-        { user_id: userId, label: '対策日', color: '#8E8E93', order_index: 8 },
-        { user_id: userId, label: 'その他', color: '#AF52DE', order_index: 9 },
+      // ★修正: preset_id を追加（NOT NULL制約対応）
+      const defaultPresets = [
+        { user_id: userId, preset_id: 'briefing',     label: '説明会',     color: '#FF9500', order_index: 0 },
+        { user_id: userId, preset_id: 'interview',    label: '面接',       color: '#007AFF', order_index: 1 },
+        { user_id: userId, preset_id: 'es_deadline',  label: 'ES締切',     color: '#FF3B30', order_index: 2 },
+        { user_id: userId, preset_id: 'written_test', label: '筆記試験',   color: '#5856D6', order_index: 3 },
+        { user_id: userId, preset_id: 'gd',           label: 'GD',         color: '#34C759', order_index: 4 },
+        { user_id: userId, preset_id: 'intern',       label: 'インターン', color: '#FF2D55', order_index: 5 },
+        { user_id: userId, preset_id: 'ob_visit',     label: 'OB訪問',    color: '#00C7BE', order_index: 6 },
+        { user_id: userId, preset_id: 'offer',        label: '内定式',     color: '#FFD60A', order_index: 7 },
+        { user_id: userId, preset_id: 'prep',         label: '対策日',     color: '#8E8E93', order_index: 8 },
+        { user_id: userId, preset_id: 'other',        label: 'その他',     color: '#AF52DE', order_index: 9 },
       ];
 
       const { data, error } = await supabase.from('color_presets').insert(defaultPresets).select();
@@ -156,9 +155,8 @@ export default function Calendar() {
           console.log('Using default date/time:', { startAt, endAt });
         }
 
-        // プレフィルイベントは新規作成なので、idを含めない一時オブジェクトとして扱う
         const prefillEvent: any = {
-          id: '', // 空のIDでマーカーとして使用（モーダル側で新規作成として判定）
+          id: '',
           title: data.title || '',
           start_at: startAt,
           end_at: endAt,
@@ -198,7 +196,7 @@ export default function Calendar() {
     const map: Record<string, { color: string; label: string }> = {};
     colorPresets.forEach(p => {
       map[p.id] = { color: p.color, label: p.label };
-      map[p.color] = { color: p.color, label: p.label }; // 旧データ互換
+      map[p.color] = { color: p.color, label: p.label };
     });
     return map;
   }, [colorPresets]);
@@ -238,7 +236,6 @@ export default function Calendar() {
   };
 
   const handleEventClick = (event: Event) => {
-    // 締切・対策イベントの場合は元のイベントを探す
     if (event.id.startsWith('prep-') || event.id.startsWith('deadline-')) {
       const originalId = event.id.replace(/^(prep-|deadline-)/, '').split('-')[0];
       const originalEvent = events.find(e => e.id === originalId || event.id.includes(e.id));
@@ -266,10 +263,8 @@ export default function Calendar() {
         return;
       }
 
-      // 終日イベントの場合、タイムゾーン問題を回避するためUTC正午を使用
       let processedEventData = { ...eventData };
       if (eventData.all_day) {
-        // 日付のみの場合（YYYY-MM-DD）、UTC正午を追加（どのタイムゾーンでも同じ日付になる）
         if (eventData.start_at && !eventData.start_at.includes('T')) {
           processedEventData.start_at = `${eventData.start_at}T12:00:00Z`;
         }
@@ -317,10 +312,8 @@ export default function Calendar() {
 
   const handleUpdateEvent = async (event: Event) => {
     try {
-      // 終日イベントの場合、タイムゾーン問題を回避するためUTC正午を使用
       let processedEvent = { ...event };
       if (event.all_day) {
-        // 日付のみの場合（YYYY-MM-DD）、UTC正午を追加（どのタイムゾーンでも同じ日付になる）
         if (event.start_at && !event.start_at.includes('T')) {
           processedEvent.start_at = `${event.start_at}T12:00:00Z`;
         }
@@ -363,6 +356,7 @@ export default function Calendar() {
     }
   };
 
+  // ★修正: preset_id を追加（NOT NULL制約対応）
   const handleUpdateColorPresets = async (presets: ColorPreset[]) => {
     try {
       const userId = await getCurrentUserId();
@@ -372,6 +366,9 @@ export default function Calendar() {
 
       const presetsWithOrder = presets.map((preset, index) => {
         const cleanPreset: any = {
+          preset_id: preset.id.startsWith('temp-')
+            ? `custom_${Date.now()}_${index}`
+            : (preset as any).preset_id || preset.id,
           label: preset.label,
           color: preset.color,
           order_index: index,
@@ -423,7 +420,6 @@ export default function Calendar() {
 
   return (
     <div className="pt-0 pb-16 bg-white min-h-screen max-w-md mx-auto flex flex-col relative">
-      {/* ヘッダー */}
       <Header
         currentDate={currentDate}
         onTodayClick={handleTodayClick}
@@ -431,7 +427,6 @@ export default function Calendar() {
         onMenuClick={() => setIsMenuOpen(true)}
       />
 
-      {/* メニューオーバーレイ */}
       {isMenuOpen && (
         <div
           className="fixed inset-0 bg-black/30 z-40"
@@ -439,7 +434,6 @@ export default function Calendar() {
         />
       )}
 
-      {/* サイドメニュー */}
       <div
         className={`fixed top-0 left-0 h-full w-64 bg-white z-50 transform transition-transform ${
           isMenuOpen ? 'translate-x-0' : '-translate-x-full'
@@ -464,7 +458,6 @@ export default function Calendar() {
         </nav>
       </div>
 
-      {/* カレンダーグリッド */}
       <div className="flex-1 min-h-0 h-[calc(100vh-120px)]">
         <CalendarGrid
           currentDate={currentDate}
@@ -476,7 +469,6 @@ export default function Calendar() {
         />
       </div>
 
-      {/* FAB（予定追加ボタン） */}
       {!isDaySheetOpen && !isAddModalOpen && (
         <button
           onClick={() => {
@@ -489,7 +481,6 @@ export default function Calendar() {
         </button>
       )}
 
-      {/* 年月選択モーダル */}
       <YearMonthSelector
         isOpen={isYearMonthSelectorOpen}
         onClose={() => setIsYearMonthSelectorOpen(false)}
@@ -497,7 +488,6 @@ export default function Calendar() {
         onSelectDate={handleYearMonthSelect}
       />
 
-      {/* 日付イベントシート */}
       <DayEventsSheet
         isOpen={isDaySheetOpen}
         onClose={() => setIsDaySheetOpen(false)}
@@ -508,7 +498,6 @@ export default function Calendar() {
         colorMap={colorMap}
       />
 
-      {/* 予定追加/編集モーダル */}
       <AddEventModal
         isOpen={isAddModalOpen}
         onClose={() => {
