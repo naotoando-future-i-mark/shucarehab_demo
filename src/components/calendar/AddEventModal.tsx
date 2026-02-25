@@ -630,10 +630,6 @@ export const AddEventModal = ({
         document.body
       )}
 
-
-
-
-
       {showRecurrenceModal && createPortal(
         <RecurrenceModal
           isOpen={showRecurrenceModal}
