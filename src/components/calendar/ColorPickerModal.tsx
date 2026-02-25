@@ -236,46 +236,5 @@ export const ColorPickerModal = ({
     );
   };
 
-  // AddEventModal側でcreatePortalしてるので、ここではしない
-  // ただしNotificationModalと同じ構造にする
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 99990,
-      }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* 背景 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.4)',
-        }}
-        onClick={handleClose}
-      />
-      {/* 中央配置 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 'calc(100% - 32px)',
-          maxWidth: '448px',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {renderContent()}
-      </div>
-    </div>
-  );
-};
+    return renderContent();
+
