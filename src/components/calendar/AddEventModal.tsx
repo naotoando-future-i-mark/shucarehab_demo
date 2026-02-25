@@ -609,13 +609,13 @@ export const AddEventModal = ({
       </div>
 
       {/* サブモーダル - createPortalでbody直下に出す */}
-            {showColorPicker && createPortal(
+                  {showColorPicker && createPortal(
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
-          width: '100vw',
-          height: '100vh',
+          right: 0,
+          bottom: 0,
           zIndex: 999999,
           display: 'flex',
           alignItems: 'center',
@@ -632,7 +632,14 @@ export const AddEventModal = ({
             }}
             onClick={() => setShowColorPicker(false)}
           />
-          <div style={{ position: 'relative', width: 'calc(100% - 32px)', maxWidth: '448px' }}>
+          <div
+            style={{
+              position: 'relative',
+              width: 'calc(100% - 32px)',
+              maxWidth: '448px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <ColorPickerModal
               isOpen={showColorPicker}
               onClose={() => setShowColorPicker(false)}
@@ -645,6 +652,7 @@ export const AddEventModal = ({
         </div>,
         document.body
       )}
+
 
 
       {showRecurrenceModal && createPortal(
