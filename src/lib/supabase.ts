@@ -1,11 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+const supabaseUrl = 'https://vycnhaqlwfrsmmvnopkx.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5Y25oYXFsd2Zyc21tdm5vcGt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMjkyNDUsImV4cCI6MjA4NTkwNTI0NX0.KqciXCNV1ctD4m5_UObbEaBmB8MfGQl-h7fV4PWm66o';
 
 const memoryStorage = new Map<string, string>();
 
