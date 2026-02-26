@@ -1,4 +1,4 @@
-import { Bookmark, ExternalLink, Grid3X3, List, ChevronLeft, Send } from 'lucide-react';
+import { Bookmark, ExternalLink, Grid3X3, List, ChevronLeft, Send, Image } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase, getCurrentUserId } from '../lib/supabase';
 import { showToast } from '../components/Toast';
@@ -20,66 +20,15 @@ type Post = {
   title: string;
   description: string;
   likes: number;
+  tagNames: string[];
 };
-
-const dummyPosts: Post[] = [
-  {
-    id: '1',
-    images: [
-      { url: '/images/magazine/es-basic.png', tags: [] },
-      { url: '/images/magazine/es-howto.png', tags: [] },
-    ],
-    title: '【超基本】いまさら聞けないESの書き方',
-    description: 'ESの基本的な書き方を解説します。',
-    likes: 234,
-  },
-  {
-    id: '2',
-    images: [
-      { url: '/images/magazine/weekly3.png', tags: [] },
-      {
-        url: '/images/magazine/sompo.png',
-        tags: [
-          { id: 'tag1', name: 'SOMPOひまわり生命', url: 'https://www.himawari-life.co.jp/recruit/', x: 50, y: 18 }
-        ]
-      },
-      {
-        url: '/images/magazine/uniqlo.png',
-        tags: [
-          { id: 'tag2', name: 'ユニクロ', url: 'https://www.uniqlo.com/jp/ja/contents/recruit/', x: 50, y: 18 }
-        ]
-      },
-    ],
-    title: '【激レア!?】週休3日の穴場企業8選',
-    description: '福利厚生も強い × 年収も高め × 安定して長く働ける企業を紹介。',
-    likes: 512,
-  },
-  {
-    id: '3',
-    images: [
-      { url: '/images/magazine/december.png', tags: [] },
-    ],
-    title: '12月下旬からの就活スケジュール',
-    description: '今からでも間に合う！就活の進め方を解説。',
-    likes: 387,
-  },
-  {
-    id: '4',
-    images: [
-      { url: '/images/magazine/interview-ng.png', tags: [] },
-    ],
-    title: '面接で絶対言ってはいけないNGワード',
-    description: '面接官が嫌がるNGワードとは？',
-    likes: 421,
-  },
-];
 
 function ImageSlider({ images }: { images: Post['images'] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showTags, setShowTags] = useState(false);
 
   const currentImage = images[currentIndex];
-  const hasTags = currentImage.tags && currentImage.tags.length > 0;
+  const hasTags = currentImage?.tags && currentImage.tags.length > 0;
 
   const handleImageClick = () => {
     if (hasTags) {
@@ -96,6 +45,14 @@ function ImageSlider({ images }: { images: Post['images'] }) {
     setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : prev));
     setShowTags(false);
   };
+
+  if (images.length === 0 || !currentImage?.url) {
+    return (
+      <div className="relative bg-gray-100 aspect-square max-w-md mx-auto flex items-center justify-center">
+        <Image size={48} className="text-gray-300" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative bg-gray-100 aspect-square max-w-md mx-auto">
@@ -214,7 +171,17 @@ function PostDetail({
 
         <div className="px-4 pb-4">
           <h2 className="text-lg font-bold text-blue-600 mb-2">{post.title}</h2>
+          {post.tagNames.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {post.tagNames.map((name) => (
+                <span key={name} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full">
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
           <p className="text-gray-600 text-sm">{post.description}</p>
+          <p className="text-xs text-gray-400 mt-2">いいね {post.likes.toLocaleString()}</p>
         </div>
       </div>
     </div>
@@ -222,16 +189,24 @@ function PostDetail({
 }
 
 function GridThumbnail({ post, onClick, isSaved }: { post: Post; onClick: () => void; isSaved: boolean }) {
+  const firstImageUrl = post.images[0]?.url;
+
   return (
     <button
       onClick={onClick}
       className="relative aspect-square bg-gray-100 overflow-hidden"
     >
-      <img
-        src={post.images[0].url}
-        alt={post.title}
-        className="w-full h-full object-cover"
-      />
+      {firstImageUrl ? (
+        <img
+          src={firstImageUrl}
+          alt={post.title}
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <Image size={28} className="text-gray-300" />
+        </div>
+      )}
       {isSaved && (
         <div className="absolute top-1 right-1">
           <Bookmark size={16} className="text-orange-500 fill-orange-500" />
@@ -246,7 +221,7 @@ export default function Magazine() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [savedPostIds, setSavedPostIds] = useState<Set<string>>(new Set());
-  const [posts, setPosts] = useState<Post[]>(dummyPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -255,21 +230,57 @@ export default function Magazine() {
 
   const loadData = async () => {
     try {
-      const userId = await getCurrentUserId();
-      if (!userId) return;
+      const [articlesResult, userId] = await Promise.all([
+        supabase.from('articles').select('*').eq('status', 'published').order('published_at', { ascending: false }),
+        getCurrentUserId(),
+      ]);
 
-      const { data: savedData, error: savedError } = await supabase
-        .from('saved_articles')
-        .select('article_id')
-        .eq('user_id', userId);
+      const articles = articlesResult.data ?? [];
 
-      if (savedError) throw savedError;
+      const [imagesResults, tagLinksResults, savedResult] = await Promise.all([
+        Promise.all(
+          articles.map((a) =>
+            supabase.from('article_images').select('*').eq('article_id', a.id).order('sort_order')
+          )
+        ),
+        Promise.all(
+          articles.map((a) =>
+            supabase
+              .from('article_tag_links')
+              .select('tags(id, name)')
+              .eq('article_id', a.id)
+          )
+        ),
+        userId
+          ? supabase.from('saved_articles').select('article_id').eq('user_id', userId)
+          : Promise.resolve({ data: [] }),
+      ]);
 
-      if (savedData) {
-        setSavedPostIds(new Set(savedData.map(s => s.article_id)));
-      }
+      const loadedPosts: Post[] = articles.map((article, i) => {
+        const images = (imagesResults[i].data ?? []).map((img: { url: string }) => ({
+          url: img.url,
+          tags: [],
+        }));
 
-      setPosts(dummyPosts);
+        const tagRows = tagLinksResults[i].data ?? [];
+        const tagNames: string[] = tagRows.flatMap((row: { tags: { id: string; name: string } | null }) =>
+          row.tags ? [row.tags.name] : []
+        );
+
+        return {
+          id: article.id,
+          images,
+          title: article.title,
+          description: article.description ?? '',
+          likes: article.likes ?? 0,
+          tagNames,
+        };
+      });
+
+      setPosts(loadedPosts);
+
+      const savedData = (savedResult as { data: { article_id: string }[] | null }).data ?? [];
+      setSavedPostIds(new Set(savedData.map((s) => s.article_id)));
     } catch (error) {
       console.error('Error loading magazine data:', error);
     } finally {
@@ -359,10 +370,18 @@ export default function Magazine() {
         </div>
       )}
 
-      {activeTab === 'saved' && savedPostIds.size === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+          読み込み中...
+        </div>
+      ) : activeTab === 'saved' && savedPostIds.size === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-400">
           <Bookmark size={48} className="mb-4" />
           <p>保存済みの投稿はありません</p>
+        </div>
+      ) : displayPosts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400 text-sm">
+          <p>記事がありません</p>
         </div>
       ) : viewMode === 'grid' || activeTab === 'saved' ? (
         <div className="grid grid-cols-3 gap-0.5">
@@ -393,6 +412,15 @@ export default function Magazine() {
                     />
                   </button>
                 </div>
+                {post.tagNames.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1.5">
+                    {post.tagNames.map((name) => (
+                      <span key={name} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full">
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <p className="text-gray-500 text-xs">{post.description}</p>
               </div>
             </div>
@@ -411,3 +439,4 @@ export default function Magazine() {
     </div>
   );
 }
+
