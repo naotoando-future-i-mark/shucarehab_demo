@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Search, Plus, Pencil, Trash2, X, ChevronUp, ChevronDown, Image, GripVertical } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Search, Plus, Pencil, Trash2, X, ChevronUp, ChevronDown, Image, GripVertical, Upload } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { supabase } from '../../lib/supabase';
 
@@ -22,6 +22,7 @@ interface ArticleImage {
   id?: string;
   url: string;
   sort_order: number;
+  storagePath?: string;
 }
 
 interface FormData {
@@ -69,8 +70,10 @@ export default function AdminMagazine() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortAsc, setSortAsc] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newImageUrl, setNewImageUrl] = useState('');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [pendingArticleId, setPendingArticleId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function fetchArticles() {
     setLoading(true);
@@ -115,13 +118,14 @@ export default function AdminMagazine() {
   function openCreate() {
     setEditTarget(null);
     setFormData(emptyForm);
-    setNewImageUrl('');
+    setPendingArticleId(null);
     setError(null);
     setModalOpen(true);
   }
 
   async function openEdit(article: Article) {
     setEditTarget(article);
+    setPendingArticleId(article.id);
     setError(null);
 
     const [{ data: tagLinks }, { data: images }] = await Promise.all([
@@ -145,7 +149,6 @@ export default function AdminMagazine() {
         ? images.map((img) => ({ id: img.id, url: img.url, sort_order: img.sort_order }))
         : [],
     });
-    setNewImageUrl('');
     setModalOpen(true);
   }
 
@@ -153,26 +156,95 @@ export default function AdminMagazine() {
     setModalOpen(false);
     setEditTarget(null);
     setFormData(emptyForm);
-    setNewImageUrl('');
+    setPendingArticleId(null);
     setError(null);
   }
 
-  function addImage() {
-    const url = newImageUrl.trim();
-    if (!url) return;
-    const maxOrder = formData.images.length > 0
-      ? Math.max(...formData.images.map((i) => i.sort_order))
-      : -1;
-    setFormData({
-      ...formData,
-      images: [...formData.images, { url, sort_order: maxOrder + 1 }],
-    });
-    setNewImageUrl('');
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    setError(null);
+
+    let articleId = pendingArticleId;
+
+    if (!articleId) {
+      const tempTitle = formData.title.trim() || '(未保存)';
+      const { data, error: err } = await supabase
+        .from('articles')
+        .insert({
+          title: tempTitle,
+          description: formData.description || null,
+          status: 'draft',
+          published_at: null,
+        })
+        .select('id')
+        .single();
+      if (err || !data) {
+        setError('記事の一時保存に失敗しました');
+        setUploading(false);
+        return;
+      }
+      articleId = data.id;
+      setPendingArticleId(articleId);
+    }
+
+    const uploadedImages: ArticleImage[] = [];
+
+    for (const file of Array.from(files)) {
+      const timestamp = Date.now();
+      const filePath = `article-images/${articleId}/${timestamp}_${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('article-images')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        setError(`アップロードに失敗しました: ${file.name}`);
+        continue;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('article-images')
+        .getPublicUrl(filePath);
+
+      const maxOrder = formData.images.length + uploadedImages.length;
+      uploadedImages.push({ url: publicUrl, sort_order: maxOrder, storagePath: filePath });
+    }
+
+    if (uploadedImages.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        images: [
+          ...prev.images,
+          ...uploadedImages.map((img, i) => ({
+            ...img,
+            sort_order: prev.images.length + i,
+          })),
+        ],
+      }));
+    }
+
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  function removeImage(index: number) {
+  async function removeImage(index: number) {
+    const img = formData.images[index];
+
+    if (img.storagePath) {
+      await supabase.storage.from('article-images').remove([img.storagePath]);
+    } else if (img.url && img.url.includes('article-images')) {
+      const urlParts = img.url.split('/article-images/');
+      if (urlParts.length > 1) {
+        const storagePath = `article-images/${urlParts[1]}`;
+        await supabase.storage.from('article-images').remove([storagePath]);
+      }
+    }
+
     const updated = formData.images.filter((_, i) => i !== index);
-    setFormData({ ...formData, images: updated });
+    setFormData({ ...formData, images: updated.map((im, i) => ({ ...im, sort_order: i })) });
   }
 
   function moveImage(from: number, to: number) {
@@ -230,6 +302,17 @@ export default function AdminMagazine() {
         return;
       }
       articleId = editTarget.id;
+    } else if (pendingArticleId) {
+      const { error: err } = await supabase
+        .from('articles')
+        .update({ ...payload, updated_at: new Date().toISOString() })
+        .eq('id', pendingArticleId);
+      if (err) {
+        setError(err.message);
+        setSaving(false);
+        return;
+      }
+      articleId = pendingArticleId;
     } else {
       const { data, error: err } = await supabase
         .from('articles')
@@ -548,7 +631,7 @@ export default function AdminMagazine() {
                           <img
                             src={img.url}
                             alt=""
-                            className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0"
+                            className="w-10 h-10 object-cover rounded border border-gray-200 flex-shrink-0"
                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                           />
                         )}
@@ -583,23 +666,24 @@ export default function AdminMagazine() {
                   )}
                 </div>
 
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addImage(); } }}
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                    placeholder="画像URLを入力して追加"
-                  />
-                  <button
-                    type="button"
-                    onClick={addImage}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors whitespace-nowrap"
-                  >
-                    追加
-                  </button>
-                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-2 px-4 py-2 text-sm border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-orange-400 hover:text-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full justify-center"
+                >
+                  <Upload size={15} />
+                  {uploading ? 'アップロード中...' : '画像を追加'}
+                </button>
+                <p className="text-xs text-gray-400 mt-1.5">複数ファイルを同時に選択できます</p>
               </div>
             </div>
 
@@ -612,7 +696,7 @@ export default function AdminMagazine() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || uploading}
                 className="px-5 py-2 text-sm rounded-lg text-white transition-colors disabled:opacity-50"
                 style={{ backgroundColor: '#FFA52F' }}
               >
