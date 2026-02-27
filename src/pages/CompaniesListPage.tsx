@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Building2, Search, Trash2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Building2, Search, Trash2, X } from 'lucide-react';
 import { Company, SelectionProgress } from '../types/company';
 import { supabase, getCurrentUserId } from '../lib/supabase';
 import { showToast } from '../components/Toast';
@@ -15,12 +15,24 @@ interface CompanyWithProgress extends Company {
   };
 }
 
+interface MasterCompanySuggestion {
+  name: string;
+  industry: string;
+  location: string;
+  employees: string;
+}
+
 export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) => {
   const [companies, setCompanies] = useState<CompanyWithProgress[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [suggestions, setSuggestions] = useState<MasterCompanySuggestion[]>([]);
+  const [selectedMaster, setSelectedMaster] = useState<MasterCompanySuggestion | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addError, setAddError] = useState('');
+  const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchCompanies();
@@ -103,16 +115,87 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
     }
   };
 
+  const handleCompanyNameChange = (value: string) => {
+    setNewCompanyName(value);
+    setSelectedMaster(null);
+    setAddError('');
+
+    if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
+
+    if (value.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    suggestTimerRef.current = setTimeout(async () => {
+      try {
+        const { data } = await supabase
+          .from('master_companies')
+          .select('name, industry, location, employees')
+          .ilike('name', `%${value}%`)
+          .limit(5);
+
+        if (data && data.length > 0) {
+          setSuggestions(data.map(d => ({
+            name: d.name,
+            industry: d.industry || '',
+            location: d.location || '',
+            employees: d.employees || '',
+          })));
+          setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      } catch {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 200);
+  };
+
+  const handleSelectSuggestion = (suggestion: MasterCompanySuggestion) => {
+    setSelectedMaster(suggestion);
+    setNewCompanyName(suggestion.name);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setAddError('');
+  };
+
+  const handleClearSelection = () => {
+    setSelectedMaster(null);
+    setNewCompanyName('');
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setAddError('');
+  };
+
   const handleAddCompany = async () => {
-    if (!newCompanyName.trim()) return;
+    const trimmedName = newCompanyName.trim();
+    if (!trimmedName) return;
+
+    setAddError('');
 
     try {
       const userId = await getCurrentUserId();
       if (!userId) return;
 
+      const { data: existing } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('name', trimmedName)
+        .maybeSingle();
+
+      if (existing) {
+        setAddError('この企業は既に追加されています');
+        return;
+      }
+
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
-        .insert([{ user_id: userId, name: newCompanyName.trim() }])
+        .insert([{ user_id: userId, name: trimmedName }])
         .select()
         .single();
 
@@ -121,10 +204,10 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
       await supabase.from('company_notes').insert([{
         user_id: userId,
         company_id: companyData.id,
-        industry: '',
+        industry: selectedMaster?.industry || '',
         job_type: '',
-        location: '',
-        employee_count: '',
+        location: selectedMaster?.location || '',
+        employee_count: selectedMaster?.employees || '',
         listing_status: '',
         base_salary: '',
         web_test: '',
@@ -139,11 +222,23 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
 
       setCompanies([{ ...companyData, latestProgress: undefined }, ...companies]);
       setNewCompanyName('');
+      setSelectedMaster(null);
+      setSuggestions([]);
+      setShowSuggestions(false);
       setShowAddModal(false);
     } catch (error) {
       console.error('Error adding company:', error);
       showToast('', 'error');
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setNewCompanyName('');
+    setSelectedMaster(null);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setAddError('');
   };
 
   const handleDeleteCompany = async (companyId: string, e: React.MouseEvent) => {
@@ -250,7 +345,6 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
         )}
       </div>
 
-      {/* +ボタン（スマホ幅に合わせて中央寄せ） */}
       {!showAddModal && (
         <div className="fixed bottom-20 left-0 right-0 z-40 pointer-events-none">
           <div className="max-w-md mx-auto relative">
@@ -265,40 +359,72 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
-          <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 pb-10">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">企業を追加</h2>
               <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setNewCompanyName('');
-                }}
-                className="text-gray-400 hover:text-gray-600 text-2xl"
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                ✕
+                <X size={22} />
               </button>
             </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">企業名</label>
-              <input
-                type="text"
-                value={newCompanyName}
-                onChange={(e) => setNewCompanyName(e.target.value)}
-                placeholder="例: 株式会社○○"
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFA52F]"
-                autoFocus
-                onKeyPress={(e) => e.key === 'Enter' && handleAddCompany()}
-              />
+
+              {selectedMaster ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded-xl">
+                  <span className="text-sm text-orange-700 flex-1">
+                    ✓ {selectedMaster.name}（master_companies から選択）
+                  </span>
+                  <button
+                    onClick={handleClearSelection}
+                    className="text-orange-400 hover:text-orange-600"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newCompanyName}
+                    onChange={(e) => handleCompanyNameChange(e.target.value)}
+                    placeholder="例: 株式会社○○"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFA52F]"
+                    autoFocus
+                    onKeyPress={(e) => e.key === 'Enter' && !showSuggestions && handleAddCompany()}
+                  />
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10 overflow-hidden">
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onMouseDown={() => handleSelectSuggestion(suggestion)}
+                          className="w-full text-left px-4 py-3 hover:bg-orange-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="text-sm font-medium text-gray-800">{suggestion.name}</div>
+                          {suggestion.industry && (
+                            <div className="text-xs text-gray-500 mt-0.5">{suggestion.industry}</div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {addError && (
+                <p className="text-xs text-red-500 mt-2">{addError}</p>
+              )}
             </div>
 
             <div className="flex gap-3">
               <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setNewCompanyName('');
-                }}
+                onClick={handleCloseModal}
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50"
               >
                 キャンセル
