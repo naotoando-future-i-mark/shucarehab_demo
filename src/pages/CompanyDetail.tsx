@@ -67,6 +67,7 @@ export default function CompanyDetail() {
   const [openSections, setOpenSections] = useState<string[]>(['schedule']);
   const [internEvents, setInternEvents] = useState<InternEvent[]>([]);
   const [whiteFeatures, setWhiteFeatures] = useState<WhiteFeature[]>([]);
+  const [isInNote, setIsInNote] = useState(false);
   const [companyNoteId, setCompanyNoteId] = useState<string | null>(null);
   const [memos, setMemos] = useState<CompanyMemo[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -121,6 +122,7 @@ export default function CompanyDetail() {
         .maybeSingle();
 
       if (!company) {
+        setIsInNote(false);
         setCompanyNoteId(null);
         return;
       }
@@ -133,10 +135,12 @@ export default function CompanyDetail() {
         .maybeSingle();
 
       if (!note) {
+        setIsInNote(false);
         setCompanyNoteId(null);
         return;
       }
 
+      setIsInNote(true);
       setCompanyNoteId(note.id);
       loadMemos(note.id);
     } catch (error) {
@@ -162,6 +166,54 @@ export default function CompanyDetail() {
   const handleAddMemo = (category: string, title: string) => {
     setEditingMemo({ category, title, content: '' });
     setIsEditModalOpen(true);
+  };
+
+  const handleAddToNote = async () => {
+    if (!company) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: companyData, error: companyError } = await supabase
+        .from('companies')
+        .insert([{ user_id: user.id, name: company.name }])
+        .select()
+        .single();
+
+      if (companyError) throw companyError;
+
+      const { data: noteData, error: noteError } = await supabase
+        .from('company_notes')
+        .insert([{
+          user_id: user.id,
+          company_id: companyData.id,
+          industry: company.industry || '',
+          job_type: '',
+          location: company.location || '',
+          employee_count: company.employees || '',
+          listing_status: '',
+          base_salary: '',
+          web_test: '',
+          working_hours: '',
+          mypage_url: '',
+          login_id: '',
+          password: '',
+          login_notes: '',
+          custom_fields: [],
+          free_memo: '',
+        }])
+        .select()
+        .single();
+
+      if (noteError) throw noteError;
+
+      setIsInNote(true);
+      setCompanyNoteId(noteData.id);
+      showToast('就活ノートに追加しました', 'success');
+    } catch (error) {
+      console.error('就活ノート追加エラー:', error);
+      showToast('追加に失敗しました', 'error');
+    }
   };
 
   const handleSaveMemo = async (content: string) => {
@@ -271,28 +323,42 @@ export default function CompanyDetail() {
           </div>
         </div>
 
-        <div className="text-center py-2">
+        <div className="text-center py-2 px-4">
           <h2 className="text-xl font-bold text-gray-900">{company.name}</h2>
+          <div className="mt-2">
+            {isInNote ? (
+              <span className="text-sm text-gray-400">✓ 就活ノートに追加済み</span>
+            ) : (
+              <button
+                onClick={handleAddToNote}
+                className="w-full py-3 border-2 border-[#FFA52F] text-[#FFA52F] rounded-xl font-medium hover:bg-orange-50 transition-colors"
+              >
+                ＋ 就活ノートに追加
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex border-b">
-          <button
-            onClick={() => setActiveTab('data')}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
-              activeTab === 'data' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-500'
-            }`}
-          >
-            企業データ
-          </button>
-          <button
-            onClick={() => setActiveTab('memo')}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
-              activeTab === 'memo' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-500'
-            }`}
-          >
-            就活メモ
-          </button>
-        </div>
+        {isInNote && (
+          <div className="flex border-b">
+            <button
+              onClick={() => setActiveTab('data')}
+              className={`flex-1 py-3 text-center font-medium transition-colors ${
+                activeTab === 'data' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-500'
+              }`}
+            >
+              企業データ
+            </button>
+            <button
+              onClick={() => setActiveTab('memo')}
+              className={`flex-1 py-3 text-center font-medium transition-colors ${
+                activeTab === 'memo' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-500'
+              }`}
+            >
+              就活メモ
+            </button>
+          </div>
+        )}
 
         {activeTab === 'data' && (
           <div className="px-4 py-4">
@@ -417,7 +483,7 @@ export default function CompanyDetail() {
           </div>
         )}
 
-        {activeTab === 'memo' && (
+        {isInNote && activeTab === 'memo' && (
           <div className="px-4 py-4 space-y-4">
             {!companyNoteId ? (
               <div className="py-10 text-center text-gray-400 text-sm">
