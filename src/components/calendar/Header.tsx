@@ -6,9 +6,10 @@ interface HeaderProps {
   onTodayClick: () => void;
   onYearMonthClick: () => void;
   onMenuClick: () => void;
+  onBellClick: () => void;
 }
 
-export const Header = ({ currentDate, onTodayClick, onYearMonthClick, onMenuClick }: HeaderProps) => {
+export const Header = ({ currentDate, onTodayClick, onYearMonthClick, onMenuClick, onBellClick }: HeaderProps) => {
   const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
   return (
@@ -37,7 +38,10 @@ export const Header = ({ currentDate, onTodayClick, onYearMonthClick, onMenuClic
         </button>
       </div>
 
-      <button className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+      <button
+        onClick={onBellClick}
+        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+      >
         <Bell size={20} />
       </button>
     </header>

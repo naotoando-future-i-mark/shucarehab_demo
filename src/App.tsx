@@ -15,6 +15,7 @@ import Notes from './pages/Notes';
 import CompanyDetail from './pages/CompanyDetail';
 import MyPage from './pages/MyPage';
 import Settings from './pages/Settings';
+import Notifications from './pages/Notifications';
 import { supabase } from './lib/supabase';
 import AdminGuard from './components/admin/AdminGuard';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -129,6 +130,7 @@ function AppInner() {
     currentPath === '/reset-password' ||
     currentPath === '/update-password' ||
     currentPath === '/calendar' ||
+    currentPath === '/notifications' ||
     isAdminPath;
 
   return (
@@ -180,6 +182,10 @@ function AppInner() {
 
         <Route path="/settings">
           <Settings />
+        </Route>
+
+        <Route path="/notifications">
+          <Notifications />
         </Route>
 
         <Route path="/admin" prefix>

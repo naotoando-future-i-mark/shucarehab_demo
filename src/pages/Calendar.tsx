@@ -428,6 +428,7 @@ const menuItems = [
         onTodayClick={handleTodayClick}
         onYearMonthClick={() => setIsYearMonthSelectorOpen(true)}
         onMenuClick={() => setIsMenuOpen(true)}
+        onBellClick={() => navigate('/notifications')}
       />
 
       {isMenuOpen && (
