@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, Pencil, Plus, Plane, Clock, TrendingDown, Gift, CheckCircle, Coffee, Monitor, Zap, Baby, Calendar, LucideIcon } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Plus, Plane, Clock, TrendingDown, Gift, CheckCircle, Coffee, Monitor, Zap, Baby, Calendar, LucideIcon } from 'lucide-react';
 import { useRouter } from '../router/Router';
 import { supabase } from '../lib/supabase';
 import { MemoEditorModal } from '../components/jobhunting/MemoEditorModal';
 import { showToast } from '../components/Toast';
+import BottomTab from '../components/BottomTab';
 
 type Company = {
   id: number;
@@ -112,48 +113,32 @@ export default function CompanyDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: companies } = await supabase
+      const { data: company } = await supabase
         .from('companies')
         .select('id')
         .eq('user_id', user.id)
         .eq('name', companyName)
         .maybeSingle();
 
-      let companyId: string;
-
-      if (!companies) {
-        const { data: newCompany, error: companyError } = await supabase
-          .from('companies')
-          .insert({ user_id: user.id, name: companyName })
-          .select('id')
-          .single();
-
-        if (companyError) throw companyError;
-        companyId = newCompany.id;
-      } else {
-        companyId = companies.id;
+      if (!company) {
+        setCompanyNoteId(null);
+        return;
       }
 
       const { data: note } = await supabase
         .from('company_notes')
         .select('id')
         .eq('user_id', user.id)
-        .eq('company_id', companyId)
+        .eq('company_id', company.id)
         .maybeSingle();
 
       if (!note) {
-        const { data: newNote, error: noteError } = await supabase
-          .from('company_notes')
-          .insert({ user_id: user.id, company_id: companyId })
-          .select('id')
-          .single();
-
-        if (noteError) throw noteError;
-        setCompanyNoteId(newNote.id);
-      } else {
-        setCompanyNoteId(note.id);
-        loadMemos(note.id);
+        setCompanyNoteId(null);
+        return;
       }
+
+      setCompanyNoteId(note.id);
+      loadMemos(note.id);
     } catch (error) {
       console.error('企業ノート読み込みエラー:', error);
     }
@@ -205,11 +190,14 @@ export default function CompanyDetail() {
 
   if (!company) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <p className="text-gray-500 mb-4">企業データが見つかりません</p>
-        <button onClick={() => navigate('/companies')} className="px-4 py-2 bg-orange-500 text-white rounded-lg">
-          企業一覧に戻る
-        </button>
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="flex flex-col items-center justify-center p-4" style={{ minHeight: 'calc(100vh - 80px)' }}>
+          <p className="text-gray-500 mb-4">企業データが見つかりません</p>
+          <button onClick={() => navigate('/companies')} className="px-4 py-2 bg-orange-500 text-white rounded-lg">
+            企業一覧に戻る
+          </button>
+        </div>
+        <BottomTab />
       </div>
     );
   }
@@ -431,65 +419,73 @@ export default function CompanyDetail() {
 
         {activeTab === 'memo' && (
           <div className="px-4 py-4 space-y-4">
-            <div className="border rounded-lg p-4">
-              <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">企業研究</span>
-              {getMemosByCategory('research').length > 0 ? (
-                <div className="space-y-2">
-                  {getMemosByCategory('research').map((memo) => (
-                    <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
-                      <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+            {!companyNoteId ? (
+              <div className="py-10 text-center text-gray-400 text-sm">
+                就活ノートから企業を追加するとメモが書けます
+              </div>
+            ) : (
+              <>
+                <div className="border rounded-lg p-4">
+                  <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">企業研究</span>
+                  {getMemosByCategory('research').length > 0 ? (
+                    <div className="space-y-2">
+                      {getMemosByCategory('research').map((memo) => (
+                        <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
+                          <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
+                  <button
+                    onClick={() => handleAddMemo('research', '企業研究')}
+                    className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
+                  >
+                    <Plus size={16} /><span>企業研究を追加する</span>
+                  </button>
                 </div>
-              ) : null}
-              <button
-                onClick={() => handleAddMemo('research', '企業研究')}
-                className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
-              >
-                <Plus size={16} /><span>企業研究を追加する</span>
-              </button>
-            </div>
 
-            <div className="border rounded-lg p-4">
-              <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">面接対策</span>
-              {getMemosByCategory('interview').length > 0 ? (
-                <div className="space-y-2">
-                  {getMemosByCategory('interview').map((memo) => (
-                    <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
-                      <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                <div className="border rounded-lg p-4">
+                  <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">面接対策</span>
+                  {getMemosByCategory('interview').length > 0 ? (
+                    <div className="space-y-2">
+                      {getMemosByCategory('interview').map((memo) => (
+                        <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
+                          <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
+                  <button
+                    onClick={() => handleAddMemo('interview', '面接対策')}
+                    className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
+                  >
+                    <Plus size={16} /><span>面接対策を追加する</span>
+                  </button>
                 </div>
-              ) : null}
-              <button
-                onClick={() => handleAddMemo('interview', '面接対策')}
-                className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
-              >
-                <Plus size={16} /><span>面接対策を追加する</span>
-              </button>
-            </div>
 
-            <div className="border rounded-lg p-4">
-              <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">ES対策</span>
-              {getMemosByCategory('es').length > 0 ? (
-                <div className="space-y-2">
-                  {getMemosByCategory('es').map((memo) => (
-                    <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
-                      <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                <div className="border rounded-lg p-4">
+                  <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">ES対策</span>
+                  {getMemosByCategory('es').length > 0 ? (
+                    <div className="space-y-2">
+                      {getMemosByCategory('es').map((memo) => (
+                        <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
+                          <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
+                  <button
+                    onClick={() => handleAddMemo('es', 'ES対策')}
+                    className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
+                  >
+                    <Plus size={16} /><span>ES対策を追加する</span>
+                  </button>
                 </div>
-              ) : null}
-              <button
-                onClick={() => handleAddMemo('es', 'ES対策')}
-                className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
-              >
-                <Plus size={16} /><span>ES対策を追加する</span>
-              </button>
-            </div>
+              </>
+            )}
           </div>
         )}
       </div>

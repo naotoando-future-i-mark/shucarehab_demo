@@ -23,158 +23,6 @@ type Company = {
   tags?: string[];
 };
 
-const dummyCompanies: Company[] = [
-  {
-    id: '100',
-    name: 'アクティアスジャパン株式会社',
-    tag: 'インターン',
-    deadline: '2025年01月01日(月)',
-    deadlineClosed: false,
-    industry: 'ソフトウェア',
-    location: '東京都渋谷区',
-    employees: '301人以上',
-    isPremium: true,
-    premiumImage: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=400&fit=crop',
-    isUrgent: true,
-    eventTitle: 'マーケティング業界NO.1の売り上げ実績を誇る会社で1Day体験',
-    eventPeriod: '6月、7月、8月、9月',
-    eventArea: '東京、愛知、滋賀、大阪、他',
-    eventDuration: '半日',
-    position: '営業職',
-    tags: ['27卒', '上場企業'],
-  },
-  {
-    id: '101',
-    name: '株式会社グローバルテック',
-    tag: 'インターン',
-    deadline: '2025年02月15日(土)',
-    deadlineClosed: false,
-    industry: 'IT・通信',
-    location: '東京都港区',
-    employees: '301人以上',
-    isPremium: true,
-    premiumImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=400&fit=crop',
-    isUrgent: false,
-    eventTitle: '最先端AI技術を体験できる2Daysインターン',
-    eventPeriod: '7月、8月',
-    eventArea: '東京、大阪',
-    eventDuration: '2日間',
-    position: 'エンジニア職',
-    tags: ['27卒', 'ベンチャー'],
-  },
-  // 無料枠企業
-  {
-    id: '1',
-    name: 'キャノンマーケティングジャパン株式会社',
-    tag: 'インターン',
-    deadline: '2025年09月15日(月)',
-    deadlineClosed: true,
-    industry: 'IT・通信',
-    location: '東京都港区',
-    employees: '50人-100人以下',
-    isPremium: false,
-  },
-  {
-    id: '2',
-    name: '株式会社メイテックフィルダーズ',
-    tag: 'インターン',
-    deadline: '2025年09月28日(日)',
-    deadlineClosed: true,
-    industry: '冠婚葬祭',
-    location: '東京都台東区',
-    employees: '301人以上',
-    isPremium: false,
-  },
-  {
-    id: '3',
-    name: '伊藤忠商事株式会社',
-    tag: 'インターン',
-    deadline: '2025年09月27日(土)',
-    deadlineClosed: true,
-    industry: '商社',
-    location: '東京都港区北青山2-5-1',
-    employees: '301人以上',
-    isPremium: false,
-  },
-  {
-    id: '4',
-    name: 'ソニーグローバルソリューションズ株式会社',
-    tag: 'インターン',
-    deadline: '2025年09月30日(火)',
-    deadlineClosed: true,
-    industry: '精密・医療機器',
-    location: '東京都港区',
-    employees: '301人以上',
-    isPremium: false,
-  },
-  {
-    id: '5',
-    name: '楽天グループ株式会社',
-    tag: '本選考',
-    deadline: '2025年10月15日(水)',
-    deadlineClosed: false,
-    industry: 'IT・インターネット',
-    location: '東京都世田谷区',
-    employees: '301人以上',
-    isPremium: false,
-  },
-  {
-    id: '6',
-    name: '株式会社サイバーエージェント',
-    tag: 'インターン',
-    deadline: '2025年10月20日(月)',
-    deadlineClosed: false,
-    industry: '広告・マーケティング',
-    location: '東京都渋谷区',
-    employees: '301人以上',
-    isPremium: false,
-  },
-  {
-    id: '7',
-    name: '三菱UFJ銀行',
-    tag: '本選考',
-    deadline: '2025年11月01日(土)',
-    deadlineClosed: false,
-    industry: '金融',
-    location: '東京都千代田区',
-    employees: '301人以上',
-    isPremium: false,
-  },
-  {
-    id: '8',
-    name: 'トヨタ自動車株式会社',
-    tag: 'インターン',
-    deadline: '2025年10月31日(金)',
-    deadlineClosed: false,
-    industry: 'メーカー',
-    location: '愛知県豊田市',
-    employees: '301人以上',
-    isPremium: false,
-  },
-  {
-    id: '9',
-    name: '株式会社リクルート',
-    tag: '本選考',
-    deadline: '2025年11月15日(土)',
-    deadlineClosed: false,
-    industry: '人材・教育',
-    location: '東京都千代田区',
-    employees: '301人以上',
-    isPremium: false,
-  },
-  {
-    id: '10',
-    name: 'アクセンチュア株式会社',
-    tag: 'インターン',
-    deadline: '2025年10月25日(土)',
-    deadlineClosed: false,
-    industry: 'コンサルティング',
-    location: '東京都港区',
-    employees: '301人以上',
-    isPremium: false,
-  },
-];
-
 // 検索フィルターオプション
 const industryOptions = ['IT・通信', 'IT・インターネット', 'ソフトウェア', '商社', '金融', 'メーカー', 'コンサルティング', '広告・マーケティング', '人材・教育', '精密・医療機器', '冠婚葬祭'];
 const employeeOptions = ['50人-100人以下', '101人-300人', '301人以上'];
@@ -184,8 +32,9 @@ export default function Companies() {
   const { navigate } = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDetailSearchOpen, setIsDetailSearchOpen] = useState(false);
-  const [companies, setCompanies] = useState<Company[]>(dummyCompanies);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const [searchTarget, setSearchTarget] = useState('企業');
   const [selectedIndustry, setSelectedIndustry] = useState('');
@@ -204,33 +53,29 @@ export default function Companies() {
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        const mappedCompanies: Company[] = data.map(c => ({
-          id: c.id,
-          name: c.name,
-          tag: c.tag || 'インターン',
-          deadline: c.deadline || '',
-          deadlineClosed: c.deadline_closed || false,
-          industry: c.industry || '',
-          location: c.location || '',
-          employees: c.employees || '',
-          isPremium: c.is_premium || false,
-          premiumImage: c.premium_image,
-          isUrgent: c.is_urgent,
-          eventTitle: c.event_title,
-          eventPeriod: c.event_period,
-          eventArea: c.event_area,
-          eventDuration: c.event_duration,
-          position: c.position,
-          tags: c.tags,
-        }));
-        setCompanies(mappedCompanies);
-      } else {
-        setCompanies(dummyCompanies);
-      }
+      const mappedCompanies: Company[] = (data ?? []).map(c => ({
+        id: c.id,
+        name: c.name,
+        tag: c.tag || 'インターン',
+        deadline: c.deadline || '',
+        deadlineClosed: c.deadline_closed || false,
+        industry: c.industry || '',
+        location: c.location || '',
+        employees: c.employees || '',
+        isPremium: c.is_premium || false,
+        premiumImage: c.premium_image,
+        isUrgent: c.is_urgent,
+        eventTitle: c.event_title,
+        eventPeriod: c.event_period,
+        eventArea: c.event_area,
+        eventDuration: c.event_duration,
+        position: c.position,
+        tags: c.tags,
+      }));
+      setCompanies(mappedCompanies);
     } catch (error) {
       console.error('Error loading companies:', error);
-      setCompanies(dummyCompanies);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -471,7 +316,16 @@ export default function Companies() {
 
         {/* 企業リスト */}
         <div className="divide-y divide-gray-100">
-          {sortedCompanies.length === 0 ? (
+          {loadError ? (
+            <div className="py-12 text-center bg-white">
+              <div className="text-gray-900 font-semibold">企業データの取得に失敗しました</div>
+              <div className="text-sm text-gray-500 mt-2">しばらく時間をおいて再度お試しください</div>
+            </div>
+          ) : !loading && companies.length === 0 && !searchQuery && !selectedIndustry && !selectedEmployees ? (
+            <div className="py-12 text-center bg-white">
+              <div className="text-gray-900 font-semibold">企業が登録されていません</div>
+            </div>
+          ) : sortedCompanies.length === 0 ? (
             <div className="py-12 text-center bg-white">
               <div className="text-gray-900 font-semibold">該当する企業がありません</div>
               <div className="text-sm text-gray-500 mt-2">検索条件を変更してください</div>
