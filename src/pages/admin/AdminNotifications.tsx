@@ -96,7 +96,15 @@ function NotificationFormModal({
       } else {
         const { error: err } = await supabase
           .from('notifications')
-          .insert([{ ...payload, notification_type: 'manual', created_at: new Date().toISOString() }]);
+          .insert({
+            title: form.title.trim(),
+            body: form.body.trim(),
+            target_type: form.target_type,
+            target_graduation_year:
+              form.target_type === 'graduation_year' ? parseInt(form.target_graduation_year) : null,
+            is_published: form.is_published,
+            notification_type: 'manual',
+          });
         if (err) throw err;
       }
       onSaved();
