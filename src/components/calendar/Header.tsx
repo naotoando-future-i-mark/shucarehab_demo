@@ -7,9 +7,10 @@ interface HeaderProps {
   onYearMonthClick: () => void;
   onMenuClick: () => void;
   onBellClick: () => void;
+  unreadCount?: number;
 }
 
-export const Header = ({ currentDate, onTodayClick, onYearMonthClick, onMenuClick, onBellClick }: HeaderProps) => {
+export const Header = ({ currentDate, onTodayClick, onYearMonthClick, onMenuClick, onBellClick, unreadCount = 0 }: HeaderProps) => {
   const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
   return (
@@ -17,9 +18,14 @@ export const Header = ({ currentDate, onTodayClick, onYearMonthClick, onMenuClic
       <div className="flex items-center gap-2">
         <button
           onClick={onMenuClick}
-          className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          className="relative p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
         >
           <Menu size={20} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </button>
         <button
           onClick={onYearMonthClick}

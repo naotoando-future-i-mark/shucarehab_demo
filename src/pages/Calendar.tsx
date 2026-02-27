@@ -27,12 +27,51 @@ export default function Calendar() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | undefined>(undefined);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const { navigate } = useRouter();
 
   useEffect(() => {
     loadData();
+    fetchUnreadCount();
   }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('graduation_year')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const graduationYear = profile?.graduation_year ?? null;
+
+      const { data: allNotifications } = await supabase
+        .from('notifications')
+        .select('id, target_type, target_graduation_year')
+        .eq('is_published', true);
+
+      const filtered = (allNotifications || []).filter((n: { id: string; target_type: string; target_graduation_year: number | null }) => {
+        if (n.target_type === 'all') return true;
+        if (graduationYear && n.target_graduation_year === graduationYear) return true;
+        return false;
+      });
+
+      const { data: reads } = await supabase
+        .from('notification_reads')
+        .select('notification_id')
+        .eq('user_id', userId);
+
+      const readSet = new Set((reads || []).map((r: { notification_id: string }) => r.notification_id));
+      const unread = filtered.filter((n: { id: string }) => !readSet.has(n.id)).length;
+      setUnreadCount(unread);
+    } catch (e) {
+      console.error('未読数取得エラー:', e);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -412,6 +451,7 @@ const menuItems = [
   { path: '/magazine', icon: '📰', label: '就活マガジン' },
   { path: '/notes', icon: '📝', label: '就活ノート' },
   { path: '/mypage', icon: '👤', label: 'マイページ' },
+  { path: '/notifications', icon: '🔔', label: 'お知らせ' },
   { path: '/settings', icon: '⚙️', label: '設定' },
 ];
 
@@ -429,6 +469,7 @@ const menuItems = [
         onYearMonthClick={() => setIsYearMonthSelectorOpen(true)}
         onMenuClick={() => setIsMenuOpen(true)}
         onBellClick={() => navigate('/notifications')}
+        unreadCount={unreadCount}
       />
 
       {isMenuOpen && (
@@ -456,7 +497,12 @@ const menuItems = [
               className="w-full px-4 py-4 flex items-center gap-4 hover:bg-gray-50 text-left"
             >
               <span className="text-2xl">{item.icon}</span>
-              <span className="text-gray-800">{item.label}</span>
+              <span className="text-gray-800 flex-1">{item.label}</span>
+              {item.path === '/notifications' && unreadCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>

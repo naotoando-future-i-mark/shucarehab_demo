@@ -7,6 +7,7 @@ import { ToastContainer, useToasts } from './components/Toast';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
 import UpdatePassword from './pages/UpdatePassword';
+import ProfileSetup from './pages/ProfileSetup';
 import Calendar from './pages/Calendar';
 import Companies from './pages/Companies';
 import Magazine from './pages/Magazine';
@@ -50,6 +51,18 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
         if (session && currentPath === '/login') {
           navigate('/calendar');
+        }
+
+        if (session && currentPath !== '/profile-setup') {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('profile_completed')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (profile && profile.profile_completed === false) {
+            navigate('/profile-setup');
+          }
         }
       } catch (err) {
         console.error('Session check error:', err);
@@ -122,6 +135,7 @@ function AppInner() {
     currentPath === '/login' ||
     currentPath === '/reset-password' ||
     currentPath === '/update-password' ||
+    currentPath === '/profile-setup' ||
     currentPath === '/magazine/new' ||
     isAdminPath;
 
@@ -129,6 +143,7 @@ function AppInner() {
     currentPath === '/login' ||
     currentPath === '/reset-password' ||
     currentPath === '/update-password' ||
+    currentPath === '/profile-setup' ||
     currentPath === '/calendar' ||
     currentPath === '/notifications' ||
     isAdminPath;
@@ -152,6 +167,10 @@ function AppInner() {
 
       {/* ログイン後 */}
       <RequireAuth>
+        <Route path="/profile-setup">
+          <ProfileSetup />
+        </Route>
+
         <Route path="/calendar">
           <Calendar />
         </Route>
