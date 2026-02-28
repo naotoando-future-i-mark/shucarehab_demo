@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Search, Plus, Upload, Pencil, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Plus, Upload, Pencil, Trash2, X, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { supabase } from '../../lib/supabase';
 
@@ -10,6 +10,17 @@ interface Company {
   employees: string | null;
   location: string | null;
   position: string | null;
+  founded_year: string | null;
+  capital: string | null;
+  revenue: string | null;
+  business_description: string | null;
+  company_url: string | null;
+  recruit_url: string | null;
+  points: string[] | null;
+  white_features: unknown | null;
+  selection_flow: unknown | null;
+  job_info: unknown | null;
+  intern_info: unknown | null;
   tags: string[] | null;
   tag: string | null;
   deadline: string | null;
@@ -31,6 +42,14 @@ interface FormData {
   employees: string;
   location: string;
   position: string;
+  founded_year: string;
+  capital: string;
+  revenue: string;
+  business_description: string;
+  company_url: string;
+  recruit_url: string;
+  points: string[];
+  tags: string[];
   tag: string;
   deadline: string;
   deadline_closed: boolean;
@@ -49,6 +68,14 @@ const emptyForm: FormData = {
   employees: '',
   location: '',
   position: '',
+  founded_year: '',
+  capital: '',
+  revenue: '',
+  business_description: '',
+  company_url: '',
+  recruit_url: '',
+  points: [],
+  tags: [],
   tag: '',
   deadline: '',
   deadline_closed: false,
@@ -62,6 +89,88 @@ const emptyForm: FormData = {
 };
 
 type SortKey = 'name' | 'industry' | 'employees' | 'location' | 'created_at';
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="col-span-2 mt-2">
+      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1.5">
+        {children}
+      </h3>
+    </div>
+  );
+}
+
+function JsonOnlyNote({ label }: { label: string }) {
+  return (
+    <div className="col-span-2">
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <p className="text-xs text-gray-400">※ {label}はJSON形式で直接編集が必要です</p>
+    </div>
+  );
+}
+
+function StringArrayEditor({
+  label,
+  values,
+  onChange,
+}: {
+  label: string;
+  values: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [input, setInput] = useState('');
+
+  function addItem() {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    onChange([...values, trimmed]);
+    setInput('');
+  }
+
+  function removeItem(idx: number) {
+    onChange(values.filter((_, i) => i !== idx));
+  }
+
+  return (
+    <div className="col-span-2">
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <div className="space-y-1.5 mb-2">
+        {values.map((v, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 text-gray-700">
+              {v}
+            </span>
+            <button
+              type="button"
+              onClick={() => removeItem(i)}
+              className="text-gray-400 hover:text-red-500 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+          placeholder="入力してEnterまたは追加ボタン"
+        />
+        <button
+          type="button"
+          onClick={addItem}
+          className="flex items-center gap-1 px-3 py-2 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap"
+        >
+          <PlusCircle size={13} />
+          追加
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -126,6 +235,14 @@ export default function AdminCompanies() {
       employees: company.employees ?? '',
       location: company.location ?? '',
       position: company.position ?? '',
+      founded_year: company.founded_year ?? '',
+      capital: company.capital ?? '',
+      revenue: company.revenue ?? '',
+      business_description: company.business_description ?? '',
+      company_url: company.company_url ?? '',
+      recruit_url: company.recruit_url ?? '',
+      points: Array.isArray(company.points) ? company.points : [],
+      tags: Array.isArray(company.tags) ? company.tags : [],
       tag: company.tag ?? '',
       deadline: company.deadline ?? '',
       deadline_closed: company.deadline_closed ?? false,
@@ -162,6 +279,14 @@ export default function AdminCompanies() {
       employees: formData.employees || null,
       location: formData.location || null,
       position: formData.position || null,
+      founded_year: formData.founded_year || null,
+      capital: formData.capital || null,
+      revenue: formData.revenue || null,
+      business_description: formData.business_description || null,
+      company_url: formData.company_url || null,
+      recruit_url: formData.recruit_url || null,
+      points: formData.points.length > 0 ? formData.points : null,
+      tags: formData.tags.length > 0 ? formData.tags : null,
       tag: formData.tag || null,
       deadline: formData.deadline || null,
       deadline_closed: formData.deadline_closed,
@@ -239,6 +364,8 @@ export default function AdminCompanies() {
       ? <ChevronUp size={14} className="text-blue-500" />
       : <ChevronDown size={14} className="text-blue-500" />;
   }
+
+  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300';
 
   return (
     <AdminLayout>
@@ -371,14 +498,17 @@ export default function AdminCompanies() {
               </button>
             </div>
 
-            <div className="overflow-y-auto px-6 py-5 space-y-4">
+            <div className="overflow-y-auto px-6 py-5">
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3">
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 mb-4">
                   {error}
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
+
+                <SectionTitle>基本情報</SectionTitle>
+
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-600 mb-1">
                     企業名 <span className="text-red-500">*</span>
@@ -387,7 +517,7 @@ export default function AdminCompanies() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className={inputCls}
                     placeholder="例: 株式会社〇〇"
                   />
                 </div>
@@ -398,7 +528,7 @@ export default function AdminCompanies() {
                     type="text"
                     value={formData.industry}
                     onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className={inputCls}
                     placeholder="例: IT・通信"
                   />
                 </div>
@@ -409,7 +539,7 @@ export default function AdminCompanies() {
                     type="text"
                     value={formData.employees}
                     onChange={(e) => setFormData({ ...formData, employees: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className={inputCls}
                     placeholder="例: 1000名以上"
                   />
                 </div>
@@ -420,7 +550,7 @@ export default function AdminCompanies() {
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className={inputCls}
                     placeholder="例: 東京都渋谷区"
                   />
                 </div>
@@ -431,18 +561,64 @@ export default function AdminCompanies() {
                     type="text"
                     value={formData.position}
                     onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className={inputCls}
                     placeholder="例: エンジニア"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">タグ</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">設立年</label>
+                  <input
+                    type="text"
+                    value={formData.founded_year}
+                    onChange={(e) => setFormData({ ...formData, founded_year: e.target.value })}
+                    className={inputCls}
+                    placeholder="例: 1990年"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">資本金</label>
+                  <input
+                    type="text"
+                    value={formData.capital}
+                    onChange={(e) => setFormData({ ...formData, capital: e.target.value })}
+                    className={inputCls}
+                    placeholder="例: 1億円"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">売上高</label>
+                  <input
+                    type="text"
+                    value={formData.revenue}
+                    onChange={(e) => setFormData({ ...formData, revenue: e.target.value })}
+                    className={inputCls}
+                    placeholder="例: 100億円"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">事業内容</label>
+                  <textarea
+                    value={formData.business_description}
+                    onChange={(e) => setFormData({ ...formData, business_description: e.target.value })}
+                    className={`${inputCls} resize-none`}
+                    rows={3}
+                    placeholder="事業内容を入力"
+                  />
+                </div>
+
+                <SectionTitle>掲載情報</SectionTitle>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">タグ（単一）</label>
                   <input
                     type="text"
                     value={formData.tag}
                     onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className={inputCls}
                     placeholder="例: 優良企業"
                   />
                 </div>
@@ -453,52 +629,8 @@ export default function AdminCompanies() {
                     type="text"
                     value={formData.deadline}
                     onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className={inputCls}
                     placeholder="例: 2025年3月31日"
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">イベントタイトル</label>
-                  <input
-                    type="text"
-                    value={formData.event_title}
-                    onChange={(e) => setFormData({ ...formData, event_title: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                    placeholder="例: 会社説明会"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">イベント期間</label>
-                  <input
-                    type="text"
-                    value={formData.event_period}
-                    onChange={(e) => setFormData({ ...formData, event_period: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                    placeholder="例: 3月〜4月"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">イベントエリア</label>
-                  <input
-                    type="text"
-                    value={formData.event_area}
-                    onChange={(e) => setFormData({ ...formData, event_area: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                    placeholder="例: 東京・大阪"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">所要時間</label>
-                  <input
-                    type="text"
-                    value={formData.event_duration}
-                    onChange={(e) => setFormData({ ...formData, event_duration: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                    placeholder="例: 90分"
                   />
                 </div>
 
@@ -508,12 +640,12 @@ export default function AdminCompanies() {
                     type="text"
                     value={formData.premium_image}
                     onChange={(e) => setFormData({ ...formData, premium_image: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className={inputCls}
                     placeholder="https://..."
                   />
                 </div>
 
-                <div className="col-span-2 flex items-center gap-6">
+                <div className="flex flex-col justify-end gap-2">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -542,6 +674,96 @@ export default function AdminCompanies() {
                     <span className="text-sm text-gray-700">締め切り終了</span>
                   </label>
                 </div>
+
+                <SectionTitle>イベント情報</SectionTitle>
+
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">イベントタイトル</label>
+                  <input
+                    type="text"
+                    value={formData.event_title}
+                    onChange={(e) => setFormData({ ...formData, event_title: e.target.value })}
+                    className={inputCls}
+                    placeholder="例: 会社説明会"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">イベント期間</label>
+                  <input
+                    type="text"
+                    value={formData.event_period}
+                    onChange={(e) => setFormData({ ...formData, event_period: e.target.value })}
+                    className={inputCls}
+                    placeholder="例: 3月〜4月"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">イベントエリア</label>
+                  <input
+                    type="text"
+                    value={formData.event_area}
+                    onChange={(e) => setFormData({ ...formData, event_area: e.target.value })}
+                    className={inputCls}
+                    placeholder="例: 東京・大阪"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">所要時間</label>
+                  <input
+                    type="text"
+                    value={formData.event_duration}
+                    onChange={(e) => setFormData({ ...formData, event_duration: e.target.value })}
+                    className={inputCls}
+                    placeholder="例: 90分"
+                  />
+                </div>
+
+                <SectionTitle>URL</SectionTitle>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">企業HP URL</label>
+                  <input
+                    type="text"
+                    value={formData.company_url}
+                    onChange={(e) => setFormData({ ...formData, company_url: e.target.value })}
+                    className={inputCls}
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">採用/申込ページURL</label>
+                  <input
+                    type="text"
+                    value={formData.recruit_url}
+                    onChange={(e) => setFormData({ ...formData, recruit_url: e.target.value })}
+                    className={inputCls}
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <SectionTitle>詳細データ</SectionTitle>
+
+                <StringArrayEditor
+                  label="企業ポイント"
+                  values={formData.points}
+                  onChange={(v) => setFormData({ ...formData, points: v })}
+                />
+
+                <StringArrayEditor
+                  label="タグ"
+                  values={formData.tags}
+                  onChange={(v) => setFormData({ ...formData, tags: v })}
+                />
+
+                <JsonOnlyNote label="ホワイト制度" />
+                <JsonOnlyNote label="選考フロー" />
+                <JsonOnlyNote label="求人情報" />
+                <JsonOnlyNote label="インターン情報" />
+
               </div>
             </div>
 
