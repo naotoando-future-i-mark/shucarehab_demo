@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, Plus, Calendar, Star, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Plus, Calendar, Star, ExternalLink, Clock, TrendingDown, Gift, Home, Umbrella, Baby, Timer, ListChecks } from 'lucide-react';
 import { useRouter } from '../router/Router';
 import { supabase } from '../lib/supabase';
 import { MemoEditorModal } from '../components/jobhunting/MemoEditorModal';
@@ -306,9 +306,9 @@ export default function CompanyDetail() {
 
   const levelBadgeClass = (level: WhiteLevel) => {
     const map: Record<WhiteLevel, string> = {
-      god: 'bg-yellow-400 text-yellow-900',
-      highest: 'bg-red-400 text-white',
-      high: 'bg-blue-400 text-white',
+      god: 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white',
+      highest: 'bg-orange-500 text-white',
+      high: 'bg-orange-400 text-white',
       normal: 'bg-gray-300 text-gray-700',
     };
     return map[level] ?? map.normal;
@@ -322,6 +322,20 @@ export default function CompanyDetail() {
       normal: '普通',
     };
     return map[level] ?? '普通';
+  };
+
+  const getWhiteIcon = (label: string) => {
+    if (label.includes('年間休日')) return <Calendar size={24} color="#F97316" />;
+    if (label.includes('月残業')) return <Clock size={24} color="#F97316" />;
+    if (label.includes('離職率')) return <TrendingDown size={24} color="#F97316" />;
+    if (label.includes('ボーナス')) return <Star size={24} color="#F97316" />;
+    if (label.includes('有給消化')) return <Umbrella size={24} color="#F97316" />;
+    if (label.includes('特別休暇（種類）')) return <ListChecks size={24} color="#F97316" />;
+    if (label.includes('特別休暇')) return <Gift size={24} color="#F97316" />;
+    if (label.includes('リモート')) return <Home size={24} color="#F97316" />;
+    if (label.includes('フレックス')) return <Timer size={24} color="#F97316" />;
+    if (label.includes('育児休暇')) return <Baby size={24} color="#F97316" />;
+    return <Star size={24} color="#F97316" />;
   };
 
   const displayVal = (v: string | null | undefined) => (v && v.trim() !== '' ? v : '-');
@@ -424,19 +438,21 @@ export default function CompanyDetail() {
                   <div className="inline-block px-3 py-1 bg-orange-500 text-white text-xs font-medium rounded mb-4">
                     ホワイト制度
                   </div>
-                  <div className="grid grid-cols-5 gap-2">
-                    {company.white_features.map((feature) => (
-                      <div key={feature.id} className="flex flex-col items-center">
-                        <span className={`text-[9px] px-1 py-0.5 rounded font-medium mb-1 text-center whitespace-nowrap ${levelBadgeClass(feature.level)}`}>
-                          {levelBadgeLabel(feature.level)}
-                        </span>
-                        <div className="w-12 h-12 bg-orange-50 rounded-lg border border-orange-200 flex items-center justify-center mb-1">
-                          <span className="text-orange-500 text-sm font-bold">{feature.iconName?.slice(0, 2) ?? '★'}</span>
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-4">
+                    <div className="grid grid-cols-5 gap-3">
+                      {company.white_features.map((feature) => (
+                        <div key={feature.id} className="bg-white rounded-xl shadow-sm border border-orange-200 p-3 flex flex-col items-center text-center">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${levelBadgeClass(feature.level)}`}>
+                            {levelBadgeLabel(feature.level)}
+                          </span>
+                          <div className="bg-orange-100 rounded-full p-3 my-2">
+                            {getWhiteIcon(feature.label)}
+                          </div>
+                          <span className="text-xs font-bold text-gray-700 mt-1 leading-tight">{feature.label}</span>
+                          <span className="text-xs text-gray-600 mt-0.5 leading-tight">{feature.value}</span>
                         </div>
-                        <span className="text-[9px] text-gray-500 text-center leading-tight">{feature.label}</span>
-                        <span className="text-[9px] text-gray-800 text-center font-medium mt-0.5 leading-tight whitespace-pre-line">{feature.value}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -579,13 +595,13 @@ export default function CompanyDetail() {
                 {openSections.includes('job') && (
                   <div className="px-4 pb-4">
                     {company.job_info && Array.isArray(company.job_info) && company.job_info.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {(company.job_info as Record<string, string>[]).map((item, i) => (
-                          <div key={i} className="border border-gray-100 rounded-xl p-3 bg-gray-50 space-y-1">
+                          <div key={i} className="border border-gray-100 rounded-xl p-4 bg-gray-50">
                             {Object.entries(item).map(([k, v]) => (
-                              <div key={k} className="flex gap-2">
-                                <span className="text-xs text-gray-400 flex-shrink-0 w-20">{k}</span>
-                                <span className="text-sm text-gray-800">{v}</span>
+                              <div key={k} className="border-b border-gray-100 py-3 last:border-0">
+                                <p className="text-sm font-bold text-gray-700 mb-1">{k}</p>
+                                <p className="text-sm text-gray-900">{v}</p>
                               </div>
                             ))}
                           </div>
@@ -618,20 +634,22 @@ export default function CompanyDetail() {
                     : <ChevronDown size={20} className="text-gray-400" />}
                 </button>
                 {openSections.includes('flow') && (
-                  <div className="px-4 pb-4">
+                  <div className="px-4 pb-24">
                     {company.selection_flow && Array.isArray(company.selection_flow) && company.selection_flow.length > 0 ? (
-                      <div className="relative">
-                        <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-orange-100" />
-                        <div className="space-y-4">
-                          {(company.selection_flow as string[]).map((step, i) => (
-                            <div key={i} className="flex items-start gap-3">
-                              <div className="relative z-10 flex-shrink-0 w-6 h-6 rounded-full bg-orange-400 border-2 border-white shadow-sm flex items-center justify-center">
-                                <span className="text-white text-[10px] font-bold">{i + 1}</span>
-                              </div>
-                              <div className="flex-1 pt-0.5">
-                                <p className="text-sm text-gray-800 font-medium">{step}</p>
-                              </div>
+                      <div className="flex">
+                        <div className="flex flex-col items-center mr-4">
+                          {(company.selection_flow as string[]).map((_, i) => (
+                            <div key={i} className="flex flex-col items-center">
+                              <div className="w-3 h-3 rounded-full bg-orange-400 flex-shrink-0" />
+                              {i < company.selection_flow!.length - 1 && (
+                                <div className="w-0.5 bg-orange-300 flex-1 my-1" style={{ minHeight: '24px' }} />
+                              )}
                             </div>
+                          ))}
+                        </div>
+                        <div className="flex flex-col gap-5 flex-1">
+                          {(company.selection_flow as string[]).map((step, i) => (
+                            <p key={i} className="text-sm text-gray-800">{step}</p>
                           ))}
                         </div>
                       </div>
