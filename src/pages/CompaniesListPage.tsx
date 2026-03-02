@@ -193,9 +193,20 @@ export const CompaniesListPage = ({ onCompanySelect }: CompaniesListPageProps) =
         return;
       }
 
+      const { data: masterData } = await supabase
+        .from('master_companies')
+        .select('id')
+        .eq('name', trimmedName)
+        .maybeSingle();
+
+      const insertData: any = { user_id: userId, name: trimmedName };
+      if (masterData) {
+        insertData.master_company_id = masterData.id;
+      }
+
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
-        .insert([{ user_id: userId, name: trimmedName }])
+        .insert([insertData])
         .select()
         .single();
 
