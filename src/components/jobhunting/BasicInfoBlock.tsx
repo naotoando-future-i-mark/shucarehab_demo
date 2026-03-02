@@ -12,13 +12,14 @@ export const BasicInfoBlock = ({ companyNote, onUpdate }: BasicInfoBlockProps) =
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     industry: companyNote.industry,
-    job_type: companyNote.job_type,
     location: companyNote.location,
     employee_count: companyNote.employee_count,
-    listing_status: companyNote.listing_status,
-    base_salary: companyNote.base_salary,
-    web_test: companyNote.web_test,
-    working_hours: companyNote.working_hours,
+    job_type: companyNote.job_type,
+    founded_year: companyNote.founded_year,
+    capital: companyNote.capital,
+    revenue: companyNote.revenue,
+    business_description: companyNote.business_description,
+    website_url: companyNote.website_url,
   });
   const [customFields, setCustomFields] = useState<CustomField[]>(
     companyNote.custom_fields || []
@@ -48,14 +49,15 @@ export const BasicInfoBlock = ({ companyNote, onUpdate }: BasicInfoBlockProps) =
   };
 
   const fields = [
-    { key: 'industry', label: '業界' },
-    { key: 'job_type', label: '職種' },
-    { key: 'location', label: '勤務地' },
+    { key: 'industry', label: '業種' },
+    { key: 'location', label: '本社所在地' },
     { key: 'employee_count', label: '従業員数' },
-    { key: 'listing_status', label: '上場情報' },
-    { key: 'base_salary', label: '基本給' },
-    { key: 'web_test', label: 'Webテスト' },
-    { key: 'working_hours', label: '勤務時間' },
+    { key: 'job_type', label: '職種' },
+    { key: 'founded_year', label: '設立年' },
+    { key: 'capital', label: '資本金' },
+    { key: 'revenue', label: '売上高' },
+    { key: 'business_description', label: '事業内容' },
+    { key: 'website_url', label: '企業HP' },
   ];
 
   return (
