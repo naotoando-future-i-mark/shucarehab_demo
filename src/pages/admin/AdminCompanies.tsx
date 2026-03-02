@@ -39,6 +39,7 @@ interface Company {
   deadline: string | null;
   deadline_closed: boolean | null;
   is_premium: boolean | null;
+  is_recommended: boolean | null;
   premium_image: string | null;
   is_urgent: boolean | null;
   event_title: string | null;
@@ -67,6 +68,7 @@ interface FormData {
   deadline: string;
   deadline_closed: boolean;
   is_premium: boolean;
+  is_recommended: boolean;
   premium_image: string;
   is_urgent: boolean;
 }
@@ -107,6 +109,7 @@ const emptyForm: FormData = {
   deadline: '',
   deadline_closed: false,
   is_premium: false,
+  is_recommended: false,
   premium_image: '',
   is_urgent: false,
 };
@@ -574,6 +577,7 @@ export default function AdminCompanies() {
       deadline: company.deadline ?? '',
       deadline_closed: company.deadline_closed ?? false,
       is_premium: company.is_premium ?? false,
+      is_recommended: company.is_recommended ?? false,
       premium_image: company.premium_image ?? '',
       is_urgent: company.is_urgent ?? false,
     });
@@ -622,6 +626,7 @@ export default function AdminCompanies() {
       deadline: formData.deadline || null,
       deadline_closed: formData.deadline_closed,
       is_premium: formData.is_premium,
+      is_recommended: formData.is_recommended,
       premium_image: formData.premium_image || null,
       is_urgent: formData.is_urgent,
       white_features: whiteFeatures.some((w) => w.value) ? whiteFeatures : null,
@@ -989,6 +994,15 @@ export default function AdminCompanies() {
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
+                      checked={formData.is_recommended}
+                      onChange={(e) => setFormData({ ...formData, is_recommended: e.target.checked })}
+                      className="w-4 h-4 rounded accent-orange-500"
+                    />
+                    <span className="text-sm text-gray-700">おすすめに表示</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
                       checked={formData.is_urgent}
                       onChange={(e) => setFormData({ ...formData, is_urgent: e.target.checked })}
                       className="w-4 h-4 rounded accent-orange-400"
@@ -1004,6 +1018,9 @@ export default function AdminCompanies() {
                     />
                     <span className="text-sm text-gray-700">締め切り終了</span>
                   </label>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-gray-400">※「おすすめに表示」をオンにすると、フリープラン企業でも「おすすめ」タブに表示されます</p>
                 </div>
 
                 <SectionTitle>イベント情報</SectionTitle>

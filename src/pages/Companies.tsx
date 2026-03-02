@@ -13,6 +13,7 @@ type Company = {
   location: string;
   employees: string;
   isPremium: boolean;
+  isRecommended?: boolean;
   premiumImage?: string;
   isUrgent?: boolean;
   eventTitle?: string;
@@ -91,6 +92,7 @@ export default function Companies() {
         location: c.location || '',
         employees: c.employees || '',
         isPremium: c.is_premium || false,
+        isRecommended: c.is_recommended || false,
         premiumImage: c.premium_image,
         isUrgent: c.is_urgent,
         eventTitle: c.event_title,
@@ -160,7 +162,7 @@ export default function Companies() {
     }
 
     if (activeTab === 'recommended') {
-      filtered = filtered.filter((c) => c.isPremium);
+      filtered = filtered.filter((c) => c.isPremium || c.isRecommended);
     }
 
     if (activeTab === 'venture') {
