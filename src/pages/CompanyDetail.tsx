@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, Plus, Calendar, Star, ExternalLink, Building2, MapPin, Users } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Plus, Calendar, Star, ExternalLink } from 'lucide-react';
 import { useRouter } from '../router/Router';
 import { supabase } from '../lib/supabase';
 import { MemoEditorModal } from '../components/jobhunting/MemoEditorModal';
@@ -71,7 +71,7 @@ export default function CompanyDetail() {
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'data' | 'memo'>('data');
-  const [openSections, setOpenSections] = useState<string[]>(['intern']);
+  const [openSections, setOpenSections] = useState<string[]>(['basic', 'intern']);
   const [isInNote, setIsInNote] = useState(false);
   const [companyNoteId, setCompanyNoteId] = useState<string | null>(null);
   const [memos, setMemos] = useState<CompanyMemo[]>([]);
@@ -374,25 +374,6 @@ export default function CompanyDetail() {
             </div>
           )}
 
-          {/* 4. 業界・本社・従業員の3行表示 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 space-y-2">
-            <div className="flex items-center gap-2 text-sm text-gray-700">
-              <Building2 size={16} className="text-gray-400 flex-shrink-0" />
-              <span className="text-gray-400 text-xs w-12">業界</span>
-              <span>{displayVal(company.industry)}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-700">
-              <MapPin size={16} className="text-gray-400 flex-shrink-0" />
-              <span className="text-gray-400 text-xs w-12">本社</span>
-              <span>{displayVal(company.location)}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-700">
-              <Users size={16} className="text-gray-400 flex-shrink-0" />
-              <span className="text-gray-400 text-xs w-12">従業員</span>
-              <span>{displayVal(company.employees)}</span>
-            </div>
-          </div>
-
           {/* 5. 就活ノート追加ボタン */}
           <div className="mb-4">
             {isInNote ? (
@@ -494,6 +475,9 @@ export default function CompanyDetail() {
                 {openSections.includes('basic') && (
                   <div className="px-4 pb-4 space-y-3">
                     {[
+                      { label: '業種', value: displayVal(company.industry) },
+                      { label: '本社所在地', value: displayVal(company.location) },
+                      { label: '従業員数', value: displayVal(company.employees) },
                       { label: '職種', value: displayVal(company.position) },
                       { label: '設立年', value: displayVal(company.founded_year) },
                       { label: '資本金', value: displayVal(company.capital) },
