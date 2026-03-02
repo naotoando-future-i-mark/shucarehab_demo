@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, Plus, Calendar } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Plus, Calendar, Star, ExternalLink } from 'lucide-react';
 import { useRouter } from '../router/Router';
 import { supabase } from '../lib/supabase';
 import { MemoEditorModal } from '../components/jobhunting/MemoEditorModal';
@@ -54,6 +54,8 @@ type InternEvent = {
   date: string;
   time: string;
   deadline: string;
+  area?: string;
+  duration?: string;
 };
 
 type CompanyMemo = {
@@ -277,6 +279,8 @@ export default function CompanyDetail() {
           date: '',
           time: '-',
           deadline: company.deadline || '-',
+          area: company.event_area || '',
+          duration: company.event_duration || '',
         }]
       : [];
 
@@ -300,282 +304,436 @@ export default function CompanyDetail() {
     return memos.filter(m => m.category === category);
   };
 
-  const levelBadge = (level: WhiteLevel) => {
-    const map: Record<WhiteLevel, { label: string; cls: string }> = {
-      god: { label: '神レベル', cls: 'badge-god' },
-      highest: { label: '最高レベル', cls: 'badge-highest' },
-      high: { label: '高レベル', cls: 'badge-high' },
-      normal: { label: '普通', cls: 'badge-normal' },
+  const levelBadgeClass = (level: WhiteLevel) => {
+    const map: Record<WhiteLevel, string> = {
+      god: 'bg-yellow-400 text-white',
+      highest: 'bg-purple-400 text-white',
+      high: 'bg-blue-400 text-white',
+      normal: 'bg-gray-300 text-gray-700',
     };
-    const { label, cls } = map[level] ?? map.normal;
-    return <span className={`text-[9px] px-1.5 py-0.5 rounded mb-1 font-medium whitespace-nowrap ${cls}`}>{label}</span>;
+    return map[level] ?? map.normal;
   };
 
+  const levelBadgeLabel = (level: WhiteLevel) => {
+    const map: Record<WhiteLevel, string> = {
+      god: '神レベル',
+      highest: '最高',
+      high: '高レベル',
+      normal: '普通',
+    };
+    return map[level] ?? '普通';
+  };
+
+  const displayVal = (v: string | null | undefined) => (v && v.trim() !== '' ? v : '-');
+
+  const overviewItems = [
+    { label: '業種', value: displayVal(company.industry) },
+    { label: '本社所在地', value: displayVal(company.location) },
+    { label: '従業員数', value: displayVal(company.employees) },
+    { label: '職種', value: displayVal(company.position) },
+    { label: '設立年', value: displayVal(company.founded_year) },
+    { label: '資本金', value: displayVal(company.capital) },
+    { label: '売上高', value: displayVal(company.revenue) },
+  ];
+
+  const hasDate = (event: InternEvent) =>
+    event.date && event.date.trim() !== '' && event.date !== '-';
+
   return (
-    <div className="min-h-screen bg-gray-100 pb-20">
-      <div className="max-w-md mx-auto bg-white min-h-screen">
-        <div className="relative px-4 py-4">
-          <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
-            <span className="text-[80px] font-bold text-orange-100 opacity-50 whitespace-nowrap">JOB NOTE</span>
-          </div>
-          <div className="relative flex items-center">
-            <button onClick={() => navigate('/companies')} className="p-1 mr-2">
-              <ArrowLeft size={24} className="text-gray-600" />
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="max-w-md mx-auto">
+
+        {/* 1. ヘッダー */}
+        <div className="bg-white px-4 pt-4 pb-3 border-b border-gray-100 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/companies')}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft size={20} className="text-gray-600" />
             </button>
-            <h1 className="text-lg font-medium text-gray-800">就活Note</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-gray-900 truncate">{company.name}</h1>
+            </div>
           </div>
+          {company.is_premium && (
+            <div className="mt-2 flex justify-start pl-9">
+              <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-400 to-pink-400 text-white text-xs px-3 py-1 rounded-full font-medium">
+                <Star size={10} fill="currentColor" /> プレミアム掲載企業
+              </span>
+            </div>
+          )}
         </div>
 
-        <div className="text-center py-2 px-4">
-          <h2 className="text-xl font-bold text-gray-900">{company.name}</h2>
-          <div className="mt-2">
+        <div className="px-4 pt-4 space-y-0">
+
+          {/* 2. ヒーロー画像（プレミアムのみ） */}
+          {company.is_premium && company.premium_image && (
+            <div className="mb-4">
+              <img
+                src={company.premium_image}
+                alt={company.name}
+                className="w-full h-48 object-cover rounded-xl shadow-sm"
+              />
+            </div>
+          )}
+
+          {/* 3. 就活ノート追加ボタン */}
+          <div className="mb-4">
             {isInNote ? (
-              <span className="text-sm text-gray-400">✓ 就活ノートに追加済み</span>
+              <p className="text-gray-400 text-sm text-center py-2">✓ 就活ノートに追加済み</p>
             ) : (
               <button
                 onClick={handleAddToNote}
-                className="w-full py-3 border-2 border-[#FFA52F] text-[#FFA52F] rounded-xl font-medium hover:bg-orange-50 transition-colors"
+                className="border-2 border-[#FFA52F] text-[#FFA52F] rounded-xl py-3 w-full font-medium hover:bg-orange-50 transition-colors text-base"
               >
                 ＋ 就活ノートに追加
               </button>
             )}
           </div>
-        </div>
 
-        {isInNote && (
-          <div className="flex border-b">
-            <button
-              onClick={() => setActiveTab('data')}
-              className={`flex-1 py-3 text-center font-medium transition-colors ${
-                activeTab === 'data' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-500'
-              }`}
-            >
-              企業データ
-            </button>
-            <button
-              onClick={() => setActiveTab('memo')}
-              className={`flex-1 py-3 text-center font-medium transition-colors ${
-                activeTab === 'memo' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-500'
-              }`}
-            >
-              就活メモ
-            </button>
-          </div>
-        )}
+          {/* 4. タブ切り替え（追加済みのみ） */}
+          {isInNote && (
+            <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
+              <button
+                onClick={() => setActiveTab('data')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === 'data'
+                    ? 'bg-white text-orange-500 shadow-sm'
+                    : 'text-gray-500'
+                }`}
+              >
+                企業データ
+              </button>
+              <button
+                onClick={() => setActiveTab('memo')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === 'memo'
+                    ? 'bg-white text-orange-500 shadow-sm'
+                    : 'text-gray-500'
+                }`}
+              >
+                就活メモ
+              </button>
+            </div>
+          )}
 
-        {activeTab === 'data' && (
-          <div className="px-4 py-4">
-            {company.is_premium && company.premium_image && (
-              <img src={company.premium_image} alt={company.name} className="w-full h-48 object-cover rounded-lg mb-4" />
-            )}
+          {/* 5. 企業データタブ */}
+          {activeTab === 'data' && (
+            <div className="space-y-4">
 
-            {company.is_premium && company.white_features && company.white_features.length > 0 && (
-              <div className="bg-white mb-4 p-4 rounded-lg border">
-                <div className="inline-block px-3 py-1 bg-orange-500 text-white text-sm font-medium rounded mb-4">
-                  ホワイト制度
+              {/* タグ */}
+              {company.tags && company.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {company.tags.map((tag, i) => (
+                    <span key={i} className="text-xs px-2.5 py-1 bg-orange-50 text-orange-600 border border-orange-200 rounded-full font-medium">
+                      {tag}
+                    </span>
+                  ))}
                 </div>
-                <div className="grid grid-cols-5 gap-2">
-                  {company.white_features.map((feature) => (
-                    <div key={feature.id} className="flex flex-col items-center">
-                      {levelBadge(feature.level)}
-                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center mb-1">
-                        <span className="text-orange-500 text-sm font-bold">{feature.iconName?.slice(0, 2) ?? '★'}</span>
-                      </div>
-                      <span className="text-[9px] text-gray-600 text-center">{feature.label}</span>
-                      <span className="text-[9px] text-gray-900 text-center whitespace-pre-line font-medium">{feature.value}</span>
+              )}
+
+              {/* セクション A: 会社概要 */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+                <h2 className="font-bold text-gray-800 mb-3 text-base">会社概要</h2>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {overviewItems.map((item) => (
+                    <div key={item.label}>
+                      <p className="text-xs text-gray-400 mb-0.5">{item.label}</p>
+                      <p className="text-sm text-gray-800 font-medium">{item.value}</p>
                     </div>
                   ))}
                 </div>
+                {company.business_description && (
+                  <div className="border-t border-gray-100 pt-3 mt-1">
+                    <p className="text-xs text-gray-400 mb-1">事業内容</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{company.business_description}</p>
+                  </div>
+                )}
+                {company.company_url && (
+                  <a
+                    href={company.company_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-orange-500 underline text-sm mt-3"
+                  >
+                    <ExternalLink size={14} />
+                    企業HPを見る
+                  </a>
+                )}
               </div>
-            )}
 
-            {company.points && company.points.length > 0 && (
-              <div className="bg-white mb-4 p-4 rounded-lg border">
-                <div className="inline-block px-3 py-1 bg-orange-500 text-white text-sm font-medium rounded mb-4">
-                  ポイント
-                </div>
-                <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
-                  <ul className="space-y-2">
-                    {company.points.map((point, index) => (
-                      <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                        <span className="text-orange-500">・</span>{point}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            <div className="border rounded-lg overflow-hidden mb-3">
-              <button onClick={() => toggleSection('intern')} className="w-full px-4 py-3 flex items-center justify-between bg-white">
-                <span className="font-medium text-gray-700">インターン情報</span>
-                {openSections.includes('intern') ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
-              </button>
-              {openSections.includes('intern') && (
-                <div className="px-4 py-3 bg-gray-50">
-                  {internEvents.length === 0 ? (
-                    <p className="text-sm text-gray-500">インターン情報がありません。</p>
-                  ) : (
-                    <>
-                      {internEvents.map((event) => (
-                        <div key={event.id} className="border rounded-lg p-3 bg-white mb-2">
-                          <div className="font-medium text-gray-800 mb-2">{event.title}</div>
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-red-100 text-red-500 text-xs rounded">応募締切日</span>
-                            <span className="text-orange-500 text-sm">{event.deadline}</span>
-                          </div>
-                        </div>
+              {/* セクション B: 企業ポイント（プレミアムのみ） */}
+              {company.is_premium && company.points && company.points.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+                  <h2 className="font-bold text-gray-800 mb-3 text-base flex items-center gap-1.5">
+                    <Star size={16} className="text-orange-400" fill="#FFA52F" />
+                    企業ポイント
+                  </h2>
+                  <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
+                    <ul className="space-y-2">
+                      {company.points.map((point, index) => (
+                        <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                          <span className="text-orange-500 font-bold flex-shrink-0 mt-0.5">✓</span>
+                          <span>{point}</span>
+                        </li>
                       ))}
-                      {company.recruit_url && (
-                        <button
-                          onClick={() => window.open(company.recruit_url!, '_blank')}
-                          className="bg-[#FFA52F] text-white rounded-lg py-3 w-full text-center font-medium mt-2"
-                        >
-                          申込ページへ
-                        </button>
-                      )}
-                    </>
-                  )}
+                    </ul>
+                  </div>
                 </div>
               )}
-            </div>
 
-            <div className="border rounded-lg overflow-hidden mb-3">
-              <button onClick={() => toggleSection('job')} className="w-full px-4 py-3 flex items-center justify-between bg-white">
-                <span className="font-medium text-gray-700">求人情報</span>
-                {openSections.includes('job') ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
-              </button>
-              {openSections.includes('job') && (
-                <div className="px-4 py-3 bg-gray-50">
-                  {company.job_info && Array.isArray(company.job_info) && company.job_info.length > 0 ? (
-                    <>
-                      <div className="space-y-2 mb-2">
+              {/* セクション C: ホワイト制度（プレミアムのみ） */}
+              {company.is_premium && company.white_features && company.white_features.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+                  <h2 className="font-bold text-gray-800 mb-3 text-base">ホワイト制度</h2>
+                  <div className="flex overflow-x-auto gap-3 pb-2">
+                    {company.white_features.map((feature) => (
+                      <div
+                        key={feature.id}
+                        className="w-24 flex-shrink-0 flex flex-col items-center bg-orange-50 rounded-xl p-2 border border-orange-100"
+                      >
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium mb-1.5 ${levelBadgeClass(feature.level)}`}>
+                          {levelBadgeLabel(feature.level)}
+                        </span>
+                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center mb-1 shadow-sm border border-orange-100">
+                          <span className="text-orange-500 text-sm font-bold">{feature.iconName?.slice(0, 2) ?? '★'}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-500 text-center leading-tight">{feature.label}</span>
+                        <span className="text-[10px] text-gray-800 text-center font-medium mt-0.5 leading-tight whitespace-pre-line">{feature.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* セクション D: インターン・イベント情報 */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+                <button
+                  onClick={() => toggleSection('intern')}
+                  className="w-full px-4 py-3.5 flex items-center justify-between"
+                >
+                  <span className="font-bold text-gray-800 text-base">インターン・イベント情報</span>
+                  {openSections.includes('intern')
+                    ? <ChevronUp size={20} className="text-gray-400" />
+                    : <ChevronDown size={20} className="text-gray-400" />}
+                </button>
+                {openSections.includes('intern') && (
+                  <div className="px-4 pb-4">
+                    {internEvents.length === 0 ? (
+                      <p className="text-sm text-gray-400">インターン・イベント情報はまだ登録されていません</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {internEvents.map((event) => (
+                          <div key={event.id} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
+                            <p className="font-medium text-gray-800 text-sm mb-2">{event.title}</p>
+                            <div className="space-y-1">
+                              {event.deadline && event.deadline !== '-' && (
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2 py-0.5 bg-red-100 text-red-500 text-xs rounded-full font-medium">応募締切</span>
+                                  <span className="text-orange-500 text-sm font-medium">{event.deadline}</span>
+                                </div>
+                              )}
+                              {event.area && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-gray-400">エリア</span>
+                                  <span className="text-xs text-gray-700">{event.area}</span>
+                                </div>
+                              )}
+                              {event.duration && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-gray-400">期間</span>
+                                  <span className="text-xs text-gray-700">{event.duration}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {company.recruit_url && (
+                          <button
+                            onClick={() => window.open(company.recruit_url!, '_blank')}
+                            className="bg-[#FFA52F] text-white rounded-lg py-3 w-full text-center font-medium text-sm mt-1"
+                          >
+                            申込ページへ
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* セクション E: 求人情報 */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+                <button
+                  onClick={() => toggleSection('job')}
+                  className="w-full px-4 py-3.5 flex items-center justify-between"
+                >
+                  <span className="font-bold text-gray-800 text-base">求人情報</span>
+                  {openSections.includes('job')
+                    ? <ChevronUp size={20} className="text-gray-400" />
+                    : <ChevronDown size={20} className="text-gray-400" />}
+                </button>
+                {openSections.includes('job') && (
+                  <div className="px-4 pb-4">
+                    {company.job_info && Array.isArray(company.job_info) && company.job_info.length > 0 ? (
+                      <div className="space-y-3">
                         {(company.job_info as Record<string, string>[]).map((item, i) => (
-                          <div key={i} className="border rounded-lg p-3 bg-white">
+                          <div key={i} className="border border-gray-100 rounded-xl p-3 bg-gray-50 space-y-1">
                             {Object.entries(item).map(([k, v]) => (
-                              <div key={k} className="text-sm text-gray-700"><span className="font-medium">{k}：</span>{v}</div>
+                              <div key={k} className="flex gap-2">
+                                <span className="text-xs text-gray-400 flex-shrink-0 w-20">{k}</span>
+                                <span className="text-sm text-gray-800">{v}</span>
+                              </div>
                             ))}
                           </div>
                         ))}
+                        {company.recruit_url && (
+                          <button
+                            onClick={() => window.open(company.recruit_url!, '_blank')}
+                            className="bg-[#FFA52F] text-white rounded-lg py-3 w-full text-center font-medium text-sm"
+                          >
+                            申込ページへ
+                          </button>
+                        )}
                       </div>
-                      {company.recruit_url && (
-                        <button
-                          onClick={() => window.open(company.recruit_url!, '_blank')}
-                          className="bg-[#FFA52F] text-white rounded-lg py-3 w-full text-center font-medium"
-                        >
-                          申込ページへ
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-500">求人情報がありません。</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="border rounded-lg overflow-hidden mb-3">
-              <button onClick={() => toggleSection('flow')} className="w-full px-4 py-3 flex items-center justify-between bg-white">
-                <span className="font-medium text-gray-700">選考フロー</span>
-                {openSections.includes('flow') ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
-              </button>
-              {openSections.includes('flow') && (
-                <div className="px-4 py-3 bg-gray-50">
-                  {company.selection_flow && Array.isArray(company.selection_flow) && company.selection_flow.length > 0 ? (
-                    <ol className="space-y-2">
-                      {(company.selection_flow as string[]).map((step, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                          <span className="flex-shrink-0 w-5 h-5 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold">{i + 1}</span>
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="text-sm text-gray-500">選考フロー情報がありません。</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="border rounded-lg overflow-hidden mb-3">
-              <button onClick={() => toggleSection('schedule')} className="w-full px-4 py-3 flex items-center justify-between bg-white">
-                <span className="font-medium text-gray-700">日程</span>
-                {openSections.includes('schedule') ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
-              </button>
-              {openSections.includes('schedule') && (
-                <div className="px-4 py-3 bg-gray-50">
-                  {internEvents.length === 0 ? (
-                    <p className="text-sm text-gray-500">日程情報がありません。</p>
-                  ) : (
-                    internEvents.map((event) => (
-                      <div key={event.id} className="border rounded-lg p-4 bg-white mb-2">
-                        <div className="flex gap-2 mb-2">
-                          <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">不明</span>
-                          <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">{event.typeLabel}</span>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="mt-1"><div className="w-4 h-4 rounded-full border-4 border-orange-400"></div></div>
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-800 mb-1">{event.title}</div>
-                            <div className="text-sm text-gray-600 space-y-0.5">
-                              <div>日にち：{event.date || '-'}</div>
-                              <div>時　間：{event.time}</div>
-                              <div>締切日：{event.deadline}</div>
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleAddToCalendar(event)}
-                          className="w-full mt-4 py-2 border-2 border-orange-400 text-orange-500 rounded-lg font-medium hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Calendar size={18} />
-                          カレンダーに登録
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {isInNote && activeTab === 'memo' && (
-          <div className="px-4 py-4 space-y-4">
-            {!companyNoteId ? (
-              <div className="py-10 text-center text-gray-400 text-sm">
-                就活ノートから企業を追加するとメモが書けます
+                    ) : (
+                      <p className="text-sm text-gray-400">求人情報はまだ登録されていません</p>
+                    )}
+                  </div>
+                )}
               </div>
-            ) : (
-              <>
-                {(['research', 'interview', 'es'] as const).map((cat) => {
-                  const labels: Record<string, string> = { research: '企業研究', interview: '面接対策', es: 'ES対策' };
-                  return (
-                    <div key={cat} className="border rounded-lg p-4">
-                      <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">{labels[cat]}</span>
-                      {getMemosByCategory(cat).length > 0 && (
-                        <div className="space-y-2 mb-1">
-                          {getMemosByCategory(cat).map((memo) => (
-                            <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
-                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
-                              <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+
+              {/* セクション F: 選考フロー */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+                <button
+                  onClick={() => toggleSection('flow')}
+                  className="w-full px-4 py-3.5 flex items-center justify-between"
+                >
+                  <span className="font-bold text-gray-800 text-base">選考フロー</span>
+                  {openSections.includes('flow')
+                    ? <ChevronUp size={20} className="text-gray-400" />
+                    : <ChevronDown size={20} className="text-gray-400" />}
+                </button>
+                {openSections.includes('flow') && (
+                  <div className="px-4 pb-4">
+                    {company.selection_flow && Array.isArray(company.selection_flow) && company.selection_flow.length > 0 ? (
+                      <div className="relative">
+                        <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-orange-100" />
+                        <div className="space-y-4">
+                          {(company.selection_flow as string[]).map((step, i) => (
+                            <div key={i} className="flex items-start gap-3">
+                              <div className="relative z-10 flex-shrink-0 w-6 h-6 rounded-full bg-orange-400 border-2 border-white shadow-sm flex items-center justify-center">
+                                <span className="text-white text-[10px] font-bold">{i + 1}</span>
+                              </div>
+                              <div className="flex-1 pt-0.5">
+                                <p className="text-sm text-gray-800 font-medium">{step}</p>
+                              </div>
                             </div>
                           ))}
                         </div>
-                      )}
-                      <button
-                        onClick={() => handleAddMemo(cat, labels[cat])}
-                        className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
-                      >
-                        <Plus size={16} /><span>{labels[cat]}を追加する</span>
-                      </button>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-          </div>
-        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">選考フロー情報はまだ登録されていません</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* セクション G: 日程 */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+                <button
+                  onClick={() => toggleSection('schedule')}
+                  className="w-full px-4 py-3.5 flex items-center justify-between"
+                >
+                  <span className="font-bold text-gray-800 text-base">日程</span>
+                  {openSections.includes('schedule')
+                    ? <ChevronUp size={20} className="text-gray-400" />
+                    : <ChevronDown size={20} className="text-gray-400" />}
+                </button>
+                {openSections.includes('schedule') && (
+                  <div className="px-4 pb-4">
+                    {internEvents.length === 0 ? (
+                      <p className="text-sm text-gray-400">日程情報がありません</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {internEvents.map((event) => (
+                          <div key={event.id} className="border border-gray-100 rounded-xl p-4 bg-gray-50">
+                            <div className="flex gap-2 mb-2">
+                              <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded-full font-medium">{event.typeLabel}</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5 flex-shrink-0">
+                                <div className="w-3.5 h-3.5 rounded-full border-[3px] border-orange-400 bg-white" />
+                              </div>
+                              <div className="flex-1 space-y-1">
+                                <p className="font-medium text-gray-800 text-sm">{event.title}</p>
+                                <div className="text-xs text-gray-500 space-y-0.5">
+                                  <p>日にち：{event.date || '-'}</p>
+                                  <p>時　間：{event.time}</p>
+                                  <p>締切日：{event.deadline}</p>
+                                </div>
+                              </div>
+                            </div>
+                            {hasDate(event) && (
+                              <button
+                                onClick={() => handleAddToCalendar(event)}
+                                className="w-full mt-3 py-2.5 border-2 border-orange-400 text-orange-500 rounded-lg font-medium hover:bg-orange-50 transition-colors flex items-center justify-center gap-2 text-sm"
+                              >
+                                <Calendar size={16} />
+                                カレンダーに登録
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+
+          {/* 6. 就活メモタブ */}
+          {isInNote && activeTab === 'memo' && (
+            <div className="space-y-4 pb-4">
+              {!companyNoteId ? (
+                <div className="py-10 text-center text-gray-400 text-sm">
+                  就活ノートから企業を追加するとメモが書けます
+                </div>
+              ) : (
+                <>
+                  {(['research', 'interview', 'es'] as const).map((cat) => {
+                    const labels: Record<string, string> = { research: '企業研究', interview: '面接対策', es: 'ES対策' };
+                    return (
+                      <div key={cat} className="border rounded-lg p-4">
+                        <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">{labels[cat]}</span>
+                        {getMemosByCategory(cat).length > 0 && (
+                          <div className="space-y-2 mb-1">
+                            {getMemosByCategory(cat).map((memo) => (
+                              <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
+                                <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleAddMemo(cat, labels[cat])}
+                          className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
+                        >
+                          <Plus size={16} /><span>{labels[cat]}を追加する</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          )}
+
+        </div>
       </div>
 
       {editingMemo && (
@@ -590,6 +748,8 @@ export default function CompanyDetail() {
           onSave={handleSaveMemo}
         />
       )}
+
+      <BottomTab />
     </div>
   );
 }
