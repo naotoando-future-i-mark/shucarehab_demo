@@ -1,49 +1,59 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, Plus, Plane, Clock, TrendingDown, Gift, CheckCircle, Coffee, Monitor, Zap, Baby, Calendar, LucideIcon } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Plus, Calendar } from 'lucide-react';
 import { useRouter } from '../router/Router';
 import { supabase } from '../lib/supabase';
 import { MemoEditorModal } from '../components/jobhunting/MemoEditorModal';
 import { showToast } from '../components/Toast';
 import BottomTab from '../components/BottomTab';
 
+type WhiteLevel = 'normal' | 'high' | 'highest' | 'god';
+
+type WhiteFeatureData = {
+  id: string;
+  iconName: string;
+  label: string;
+  value: string;
+  level: WhiteLevel;
+};
+
 type Company = {
-  id: number;
+  id: string;
   name: string;
-  tag: string;
-  deadline: string;
-  deadlineClosed: boolean;
-  industry: string;
-  location: string;
-  employees: string;
-  isPremium: boolean;
-  premiumImage?: string;
-  isUrgent?: boolean;
-  eventTitle?: string;
-  eventPeriod?: string;
-  eventArea?: string;
-  eventDuration?: string;
-  position?: string;
-  tags?: string[];
+  tag?: string | null;
+  deadline?: string | null;
+  deadline_closed?: boolean | null;
+  industry?: string | null;
+  location?: string | null;
+  employees?: string | null;
+  is_premium?: boolean | null;
+  premium_image?: string | null;
+  is_urgent?: boolean | null;
+  event_title?: string | null;
+  event_period?: string | null;
+  event_area?: string | null;
+  event_duration?: string | null;
+  position?: string | null;
+  founded_year?: string | null;
+  capital?: string | null;
+  revenue?: string | null;
+  business_description?: string | null;
+  company_url?: string | null;
+  recruit_url?: string | null;
+  points?: string[] | null;
+  white_features?: WhiteFeatureData[] | null;
+  selection_flow?: unknown[] | null;
+  job_info?: unknown[] | null;
+  intern_info?: unknown[] | null;
+  tags?: string[] | null;
 };
 
 type InternEvent = {
   id: string;
   title: string;
-  type: string;
   typeLabel: string;
   date: string;
   time: string;
   deadline: string;
-};
-
-type WhiteLevel = 'normal' | 'high' | 'highest' | 'god';
-
-type WhiteFeature = {
-  id: string;
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  level: WhiteLevel;
 };
 
 type CompanyMemo = {
@@ -54,19 +64,12 @@ type CompanyMemo = {
   created_at: string;
 };
 
-const companyPoints = [
-  '月給が初年度から50万円もらえる',
-  '充実した研修制度で未経験でも安心',
-  '風通しの良い社風で意見が通りやすい',
-];
-
 export default function CompanyDetail() {
   const { navigate } = useRouter();
   const [company, setCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'data' | 'memo'>('data');
-  const [openSections, setOpenSections] = useState<string[]>(['schedule']);
-  const [internEvents, setInternEvents] = useState<InternEvent[]>([]);
-  const [whiteFeatures, setWhiteFeatures] = useState<WhiteFeature[]>([]);
+  const [openSections, setOpenSections] = useState<string[]>(['intern']);
   const [isInNote, setIsInNote] = useState(false);
   const [companyNoteId, setCompanyNoteId] = useState<string | null>(null);
   const [memos, setMemos] = useState<CompanyMemo[]>([]);
@@ -74,54 +77,49 @@ export default function CompanyDetail() {
   const [editingMemo, setEditingMemo] = useState<{ category: string; title: string; content: string } | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('shukarehub_selected_company');
-    if (stored) {
-      const parsedCompany = JSON.parse(stored);
-      setCompany(parsedCompany);
+    async function load() {
+      const stored = localStorage.getItem('shukarehub_selected_company');
+      if (!stored) { setLoading(false); return; }
 
-      setInternEvents([
-        {
-          id: '1',
-          title: parsedCompany.eventTitle || `${parsedCompany.name} 1Day仕事体験`,
-          type: 'intern',
-          typeLabel: '仕事体験',
-          date: '',
-          time: '-',
-          deadline: parsedCompany.deadline || '2026年02月28日（土）',
-        }
-      ]);
+      let companyId: string | null = null;
+      try {
+        const parsed = JSON.parse(stored);
+        companyId = parsed.id ?? parsed ?? null;
+      } catch {
+        setLoading(false);
+        return;
+      }
 
-      const features: WhiteFeature[] = [
-        { id: '1', icon: Plane, label: '年間休日', value: '130日以上', level: 'highest' },
-        { id: '2', icon: Clock, label: '月残業', value: '残業なし', level: 'god' },
-        { id: '3', icon: TrendingDown, label: '離職率', value: '20%未満\n(3年以内)', level: 'highest' },
-        { id: '4', icon: Gift, label: 'ボーナス', value: '月給5ヶ月\n以上', level: 'highest' },
-        { id: '5', icon: CheckCircle, label: '有休消化', value: '消化率90%\n以上', level: 'god' },
-        { id: '6', icon: Coffee, label: '特別休暇', value: '年20日以上', level: 'highest' },
-        { id: '7', icon: Plane, label: '特別休暇', value: '10種類以上', level: 'highest' },
-        { id: '8', icon: Monitor, label: 'リモート', value: 'フルリモート', level: 'god' },
-        { id: '9', icon: Zap, label: 'フレックス', value: 'フル\nフレックス', level: 'god' },
-        { id: '10', icon: Baby, label: '育児休暇', value: '女性90%\n男性50%', level: 'highest' },
-      ];
-      setWhiteFeatures(features);
+      if (!companyId) { setLoading(false); return; }
 
-      loadCompanyNote(parsedCompany.name);
+      const { data, error } = await supabase
+        .from('master_companies')
+        .select('*')
+        .eq('id', companyId)
+        .single();
+
+      if (!error && data) {
+        setCompany(data as Company);
+        loadCompanyNote(data.id, data.name);
+      }
+      setLoading(false);
     }
+    load();
   }, []);
 
-  const loadCompanyNote = async (companyName: string) => {
+  const loadCompanyNote = async (masterCompanyId: string, companyName: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: company } = await supabase
+      const { data: companyRow } = await supabase
         .from('companies')
         .select('id')
         .eq('user_id', user.id)
         .eq('name', companyName)
         .maybeSingle();
 
-      if (!company) {
+      if (!companyRow) {
         setIsInNote(false);
         setCompanyNoteId(null);
         return;
@@ -131,7 +129,7 @@ export default function CompanyDetail() {
         .from('company_notes')
         .select('id')
         .eq('user_id', user.id)
-        .eq('company_id', company.id)
+        .eq('company_id', companyRow.id)
         .maybeSingle();
 
       if (!note) {
@@ -176,7 +174,7 @@ export default function CompanyDetail() {
 
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
-        .insert([{ user_id: user.id, name: company.name }])
+        .insert([{ user_id: user.id, name: company.name, master_company_id: company.id }])
         .select()
         .single();
 
@@ -240,6 +238,15 @@ export default function CompanyDetail() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20 flex items-center justify-center">
+        <p className="text-gray-400 text-sm">読み込み中...</p>
+        <BottomTab />
+      </div>
+    );
+  }
+
   if (!company) {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -260,6 +267,19 @@ export default function CompanyDetail() {
     );
   };
 
+  const internEvents: InternEvent[] = company.intern_info && Array.isArray(company.intern_info) && company.intern_info.length > 0
+    ? (company.intern_info as InternEvent[])
+    : company.event_title
+      ? [{
+          id: '1',
+          title: company.event_title,
+          typeLabel: '仕事体験',
+          date: '',
+          time: '-',
+          deadline: company.deadline || '-',
+        }]
+      : [];
+
   const handleAddToCalendar = (event: InternEvent) => {
     const calendarEventData = {
       title: event.title,
@@ -276,36 +296,19 @@ export default function CompanyDetail() {
     navigate('/calendar?addEvent=true');
   };
 
-  const renderLevelBadge = (level: WhiteLevel) => {
-    if (level === 'god') {
-      return (
-        <span className="text-[9px] px-1.5 py-0.5 rounded mb-1 font-medium whitespace-nowrap badge-god">
-          神レベル
-        </span>
-      );
-    } else if (level === 'highest') {
-      return (
-        <span className="text-[9px] px-1.5 py-0.5 rounded mb-1 font-medium whitespace-nowrap badge-highest">
-          最高レベル
-        </span>
-      );
-    } else if (level === 'high') {
-      return (
-        <span className="text-[9px] px-1.5 py-0.5 rounded mb-1 font-medium whitespace-nowrap badge-high">
-          高レベル
-        </span>
-      );
-    } else {
-      return (
-        <span className="text-[9px] px-1.5 py-0.5 rounded mb-1 font-medium whitespace-nowrap badge-normal">
-          普通
-        </span>
-      );
-    }
-  };
-
   const getMemosByCategory = (category: string) => {
     return memos.filter(m => m.category === category);
+  };
+
+  const levelBadge = (level: WhiteLevel) => {
+    const map: Record<WhiteLevel, { label: string; cls: string }> = {
+      god: { label: '神レベル', cls: 'badge-god' },
+      highest: { label: '最高レベル', cls: 'badge-highest' },
+      high: { label: '高レベル', cls: 'badge-high' },
+      normal: { label: '普通', cls: 'badge-normal' },
+    };
+    const { label, cls } = map[level] ?? map.normal;
+    return <span className={`text-[9px] px-1.5 py-0.5 rounded mb-1 font-medium whitespace-nowrap ${cls}`}>{label}</span>;
   };
 
   return (
@@ -362,43 +365,38 @@ export default function CompanyDetail() {
 
         {activeTab === 'data' && (
           <div className="px-4 py-4">
-            {company.isPremium && company.premiumImage && (
-              <img src={company.premiumImage} alt={company.name} className="w-full h-48 object-cover rounded-lg mb-4" />
+            {company.is_premium && company.premium_image && (
+              <img src={company.premium_image} alt={company.name} className="w-full h-48 object-cover rounded-lg mb-4" />
             )}
 
-            {company.isPremium && whiteFeatures.length > 0 && (
+            {company.is_premium && company.white_features && company.white_features.length > 0 && (
               <div className="bg-white mb-4 p-4 rounded-lg border">
                 <div className="inline-block px-3 py-1 bg-orange-500 text-white text-sm font-medium rounded mb-4">
                   ホワイト制度
                 </div>
                 <div className="grid grid-cols-5 gap-2">
-                  {whiteFeatures.map((feature) => {
-                    const Icon = feature.icon;
-                    return (
-                      <div key={feature.id} className="flex flex-col items-center">
-                        {renderLevelBadge(feature.level)}
-                        <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center mb-1">
-                          <Icon size={20} className="text-orange-500" />
-                        </div>
-                        <span className="text-[9px] text-gray-600 text-center">{feature.label}</span>
-                        <span className="text-[9px] text-gray-900 text-center whitespace-pre-line font-medium">
-                          {feature.value}
-                        </span>
+                  {company.white_features.map((feature) => (
+                    <div key={feature.id} className="flex flex-col items-center">
+                      {levelBadge(feature.level)}
+                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center mb-1">
+                        <span className="text-orange-500 text-sm font-bold">{feature.iconName?.slice(0, 2) ?? '★'}</span>
                       </div>
-                    );
-                  })}
+                      <span className="text-[9px] text-gray-600 text-center">{feature.label}</span>
+                      <span className="text-[9px] text-gray-900 text-center whitespace-pre-line font-medium">{feature.value}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
-            {company.isPremium && (
+            {company.points && company.points.length > 0 && (
               <div className="bg-white mb-4 p-4 rounded-lg border">
                 <div className="inline-block px-3 py-1 bg-orange-500 text-white text-sm font-medium rounded mb-4">
                   ポイント
                 </div>
                 <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
                   <ul className="space-y-2">
-                    {companyPoints.map((point, index) => (
+                    {company.points.map((point, index) => (
                       <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                         <span className="text-orange-500">・</span>{point}
                       </li>
@@ -415,15 +413,29 @@ export default function CompanyDetail() {
               </button>
               {openSections.includes('intern') && (
                 <div className="px-4 py-3 bg-gray-50">
-                  {internEvents.map((event) => (
-                    <div key={event.id} className="border rounded-lg p-3 bg-white mb-2">
-                      <div className="font-medium text-gray-800 mb-2">{event.title}</div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-red-100 text-red-500 text-xs rounded">応募締切日</span>
-                        <span className="text-orange-500 text-sm">{event.deadline}</span>
-                      </div>
-                    </div>
-                  ))}
+                  {internEvents.length === 0 ? (
+                    <p className="text-sm text-gray-500">インターン情報がありません。</p>
+                  ) : (
+                    <>
+                      {internEvents.map((event) => (
+                        <div key={event.id} className="border rounded-lg p-3 bg-white mb-2">
+                          <div className="font-medium text-gray-800 mb-2">{event.title}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-red-100 text-red-500 text-xs rounded">応募締切日</span>
+                            <span className="text-orange-500 text-sm">{event.deadline}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {company.recruit_url && (
+                        <button
+                          onClick={() => window.open(company.recruit_url!, '_blank')}
+                          className="bg-[#FFA52F] text-white rounded-lg py-3 w-full text-center font-medium mt-2"
+                        >
+                          申込ページへ
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -433,7 +445,33 @@ export default function CompanyDetail() {
                 <span className="font-medium text-gray-700">求人情報</span>
                 {openSections.includes('job') ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
               </button>
-              {openSections.includes('job') && <div className="px-4 py-3 bg-gray-50 text-sm text-gray-500">求人情報がありません。</div>}
+              {openSections.includes('job') && (
+                <div className="px-4 py-3 bg-gray-50">
+                  {company.job_info && Array.isArray(company.job_info) && company.job_info.length > 0 ? (
+                    <>
+                      <div className="space-y-2 mb-2">
+                        {(company.job_info as Record<string, string>[]).map((item, i) => (
+                          <div key={i} className="border rounded-lg p-3 bg-white">
+                            {Object.entries(item).map(([k, v]) => (
+                              <div key={k} className="text-sm text-gray-700"><span className="font-medium">{k}：</span>{v}</div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                      {company.recruit_url && (
+                        <button
+                          onClick={() => window.open(company.recruit_url!, '_blank')}
+                          className="bg-[#FFA52F] text-white rounded-lg py-3 w-full text-center font-medium"
+                        >
+                          申込ページへ
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-500">求人情報がありません。</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border rounded-lg overflow-hidden mb-3">
@@ -441,7 +479,22 @@ export default function CompanyDetail() {
                 <span className="font-medium text-gray-700">選考フロー</span>
                 {openSections.includes('flow') ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
               </button>
-              {openSections.includes('flow') && <div className="px-4 py-3 bg-gray-50 text-sm text-gray-500">選考フロー情報がここに表示されます。</div>}
+              {openSections.includes('flow') && (
+                <div className="px-4 py-3 bg-gray-50">
+                  {company.selection_flow && Array.isArray(company.selection_flow) && company.selection_flow.length > 0 ? (
+                    <ol className="space-y-2">
+                      {(company.selection_flow as string[]).map((step, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                          <span className="flex-shrink-0 w-5 h-5 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                          {step}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-sm text-gray-500">選考フロー情報がありません。</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border rounded-lg overflow-hidden mb-3">
@@ -451,32 +504,36 @@ export default function CompanyDetail() {
               </button>
               {openSections.includes('schedule') && (
                 <div className="px-4 py-3 bg-gray-50">
-                  {internEvents.map((event) => (
-                    <div key={event.id} className="border rounded-lg p-4 bg-white">
-                      <div className="flex gap-2 mb-2">
-                        <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">不明</span>
-                        <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">{event.typeLabel}</span>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="mt-1"><div className="w-4 h-4 rounded-full border-4 border-orange-400"></div></div>
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-800 mb-1">{event.title}</div>
-                          <div className="text-sm text-gray-600 space-y-0.5">
-                            <div>日にち：{event.date || '-'}</div>
-                            <div>時　間：{event.time}</div>
-                            <div>締切日：{event.deadline}</div>
+                  {internEvents.length === 0 ? (
+                    <p className="text-sm text-gray-500">日程情報がありません。</p>
+                  ) : (
+                    internEvents.map((event) => (
+                      <div key={event.id} className="border rounded-lg p-4 bg-white mb-2">
+                        <div className="flex gap-2 mb-2">
+                          <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">不明</span>
+                          <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">{event.typeLabel}</span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1"><div className="w-4 h-4 rounded-full border-4 border-orange-400"></div></div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-800 mb-1">{event.title}</div>
+                            <div className="text-sm text-gray-600 space-y-0.5">
+                              <div>日にち：{event.date || '-'}</div>
+                              <div>時　間：{event.time}</div>
+                              <div>締切日：{event.deadline}</div>
+                            </div>
                           </div>
                         </div>
+                        <button
+                          onClick={() => handleAddToCalendar(event)}
+                          className="w-full mt-4 py-2 border-2 border-orange-400 text-orange-500 rounded-lg font-medium hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Calendar size={18} />
+                          カレンダーに登録
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleAddToCalendar(event)}
-                        className="w-full mt-4 py-2 border-2 border-orange-400 text-orange-500 rounded-lg font-medium hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Calendar size={18} />
-                        カレンダーに登録
-                      </button>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -491,65 +548,30 @@ export default function CompanyDetail() {
               </div>
             ) : (
               <>
-                <div className="border rounded-lg p-4">
-                  <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">企業研究</span>
-                  {getMemosByCategory('research').length > 0 ? (
-                    <div className="space-y-2">
-                      {getMemosByCategory('research').map((memo) => (
-                        <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
-                          <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                {(['research', 'interview', 'es'] as const).map((cat) => {
+                  const labels: Record<string, string> = { research: '企業研究', interview: '面接対策', es: 'ES対策' };
+                  return (
+                    <div key={cat} className="border rounded-lg p-4">
+                      <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">{labels[cat]}</span>
+                      {getMemosByCategory(cat).length > 0 && (
+                        <div className="space-y-2 mb-1">
+                          {getMemosByCategory(cat).map((memo) => (
+                            <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
+                              <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                      <button
+                        onClick={() => handleAddMemo(cat, labels[cat])}
+                        className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
+                      >
+                        <Plus size={16} /><span>{labels[cat]}を追加する</span>
+                      </button>
                     </div>
-                  ) : null}
-                  <button
-                    onClick={() => handleAddMemo('research', '企業研究')}
-                    className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
-                  >
-                    <Plus size={16} /><span>企業研究を追加する</span>
-                  </button>
-                </div>
-
-                <div className="border rounded-lg p-4">
-                  <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">面接対策</span>
-                  {getMemosByCategory('interview').length > 0 ? (
-                    <div className="space-y-2">
-                      {getMemosByCategory('interview').map((memo) => (
-                        <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
-                          <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                  <button
-                    onClick={() => handleAddMemo('interview', '面接対策')}
-                    className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
-                  >
-                    <Plus size={16} /><span>面接対策を追加する</span>
-                  </button>
-                </div>
-
-                <div className="border rounded-lg p-4">
-                  <span className="inline-block px-3 py-1 border border-orange-500 text-orange-500 text-sm rounded mb-3">ES対策</span>
-                  {getMemosByCategory('es').length > 0 ? (
-                    <div className="space-y-2">
-                      {getMemosByCategory('es').map((memo) => (
-                        <div key={memo.id} className="p-3 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{memo.content}</p>
-                          <p className="text-xs text-gray-400 mt-2">{new Date(memo.created_at).toLocaleDateString('ja-JP')}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                  <button
-                    onClick={() => handleAddMemo('es', 'ES対策')}
-                    className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 mt-3 hover:bg-gray-50 rounded transition-colors"
-                  >
-                    <Plus size={16} /><span>ES対策を追加する</span>
-                  </button>
-                </div>
+                  );
+                })}
               </>
             )}
           </div>
