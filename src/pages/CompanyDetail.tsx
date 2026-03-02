@@ -78,16 +78,16 @@ export default function CompanyDetail() {
 
   useEffect(() => {
     async function load() {
-      const stored = localStorage.getItem('shukarehub_selected_company');
+      const stored = localStorage.getItem('shukarehub_selected_company_id')
+        ?? localStorage.getItem('shukarehub_selected_company');
       if (!stored) { setLoading(false); return; }
 
       let companyId: string | null = null;
       try {
         const parsed = JSON.parse(stored);
-        companyId = parsed.id ?? parsed ?? null;
+        companyId = typeof parsed === 'object' ? (parsed.id ?? null) : parsed;
       } catch {
-        setLoading(false);
-        return;
+        companyId = stored;
       }
 
       if (!companyId) { setLoading(false); return; }

@@ -113,7 +113,7 @@ export default function Companies() {
   }, [companies, searchQuery, selectedIndustry, selectedEmployees, searchTarget]);
 
   const handleCompanyClick = (company: Company) => {
-    localStorage.setItem('shukarehub_selected_company', JSON.stringify(company));
+    localStorage.setItem('shukarehub_selected_company_id', company.id);
     navigate('/companies/detail');
   };
 
