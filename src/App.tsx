@@ -25,6 +25,7 @@ import AdminMagazine from './pages/admin/AdminMagazine';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminNotifications from './pages/admin/AdminNotifications';
 import AdminTags from './pages/admin/AdminTags';
+import AdminRoles from './pages/admin/AdminRoles';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { currentPath, navigate } = useRouter();
@@ -215,6 +216,7 @@ function AppInner() {
             <Route path="/admin/users"><AdminUsers /></Route>
             <Route path="/admin/notifications"><AdminNotifications /></Route>
             <Route path="/admin/tags"><AdminTags /></Route>
+            <Route path="/admin/roles"><AdminRoles /></Route>
           </AdminGuard>
         </Route>
       </RequireAuth>

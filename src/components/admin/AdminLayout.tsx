@@ -7,6 +7,7 @@ import {
   Users,
   Bell,
   Tag,
+  Shield,
   ArrowLeft,
 } from 'lucide-react';
 
@@ -23,6 +24,7 @@ const menuItems: MenuItem[] = [
   { label: 'ユーザー管理', path: '/admin/users', icon: <Users size={18} /> },
   { label: 'お知らせ管理', path: '/admin/notifications', icon: <Bell size={18} /> },
   { label: 'タグ管理', path: '/admin/tags', icon: <Tag size={18} /> },
+  { label: '権限管理', path: '/admin/roles', icon: <Shield size={18} /> },
 ];
 
 interface AdminLayoutProps {
