@@ -325,17 +325,17 @@ export default function CompanyDetail() {
   };
 
   const getWhiteIcon = (label: string) => {
-    if (label.includes('年間休日')) return <Calendar size={24} color="#F97316" />;
-    if (label.includes('月残業')) return <Clock size={24} color="#F97316" />;
-    if (label.includes('離職率')) return <TrendingDown size={24} color="#F97316" />;
-    if (label.includes('ボーナス')) return <Star size={24} color="#F97316" />;
-    if (label.includes('有給消化')) return <Umbrella size={24} color="#F97316" />;
-    if (label.includes('特別休暇（種類）')) return <ListChecks size={24} color="#F97316" />;
-    if (label.includes('特別休暇')) return <Gift size={24} color="#F97316" />;
-    if (label.includes('リモート')) return <Home size={24} color="#F97316" />;
-    if (label.includes('フレックス')) return <Timer size={24} color="#F97316" />;
-    if (label.includes('育児休暇')) return <Baby size={24} color="#F97316" />;
-    return <Star size={24} color="#F97316" />;
+    if (label.includes('年間休日')) return <Calendar size={20} color="#F97316" />;
+    if (label.includes('月残業')) return <Clock size={20} color="#F97316" />;
+    if (label.includes('離職率')) return <TrendingDown size={20} color="#F97316" />;
+    if (label.includes('ボーナス')) return <Star size={20} color="#F97316" />;
+    if (label.includes('有給消化')) return <Umbrella size={20} color="#F97316" />;
+    if (label.includes('特別休暇（種類）')) return <ListChecks size={20} color="#F97316" />;
+    if (label.includes('特別休暇')) return <Gift size={20} color="#F97316" />;
+    if (label.includes('リモート')) return <Home size={20} color="#F97316" />;
+    if (label.includes('フレックス')) return <Timer size={20} color="#F97316" />;
+    if (label.includes('育児休暇')) return <Baby size={20} color="#F97316" />;
+    return <Star size={20} color="#F97316" />;
   };
 
   const displayVal = (v: string | null | undefined) => (v && v.trim() !== '' ? v : '-');
@@ -438,18 +438,18 @@ export default function CompanyDetail() {
                   <div className="inline-block px-3 py-1 bg-orange-500 text-white text-xs font-medium rounded mb-4">
                     ホワイト制度
                   </div>
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-4">
-                    <div className="grid grid-cols-5 gap-3">
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-3">
+                    <div className="grid grid-cols-5 gap-1.5">
                       {company.white_features.map((feature) => (
-                        <div key={feature.id} className="bg-white rounded-xl shadow-sm border border-orange-200 p-3 flex flex-col items-center text-center">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${levelBadgeClass(feature.level)}`}>
+                        <div key={feature.id} className="bg-white rounded-lg shadow-sm border border-orange-200 p-2 flex flex-col items-center text-center">
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold ${levelBadgeClass(feature.level)}`}>
                             {levelBadgeLabel(feature.level)}
                           </span>
-                          <div className="bg-orange-100 rounded-full p-3 my-2">
+                          <div className="bg-orange-100 rounded-full p-2 my-1">
                             {getWhiteIcon(feature.label)}
                           </div>
-                          <span className="text-xs font-bold text-gray-700 mt-1 leading-tight">{feature.label}</span>
-                          <span className="text-xs text-gray-600 mt-0.5 leading-tight">{feature.value}</span>
+                          <span className="text-[10px] font-bold text-gray-700 mt-1 leading-tight">{feature.label}</span>
+                          <span className="text-[10px] text-gray-600 leading-tight line-clamp-2">{feature.value}</span>
                         </div>
                       ))}
                     </div>
@@ -596,14 +596,12 @@ export default function CompanyDetail() {
                   <div className="px-4 pb-4">
                     {company.job_info && Array.isArray(company.job_info) && company.job_info.length > 0 ? (
                       <div className="space-y-4">
-                        {(company.job_info as Record<string, string>[]).map((item, i) => (
+                        {(company.job_info as { key: string; value: string }[]).map((item, i) => (
                           <div key={i} className="border border-gray-100 rounded-xl p-4 bg-gray-50">
-                            {Object.entries(item).map(([k, v]) => (
-                              <div key={k} className="border-b border-gray-100 py-3 last:border-0">
-                                <p className="text-sm font-bold text-gray-700 mb-1">{k}</p>
-                                <p className="text-sm text-gray-900">{v}</p>
-                              </div>
-                            ))}
+                            <div className="border-b border-gray-100 py-3 last:border-b-0">
+                              <p className="text-sm font-bold text-gray-700">{item.key}</p>
+                              <p className="text-sm text-gray-900 mt-1">{item.value}</p>
+                            </div>
                           </div>
                         ))}
                         {company.recruit_url && (
