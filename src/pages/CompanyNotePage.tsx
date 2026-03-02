@@ -22,6 +22,17 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
   const [referenceSites, setReferenceSites] = useState<ReferenceSite[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('memo');
   const [loading, setLoading] = useState(true);
+  const [masterData, setMasterData] = useState<{
+    industry?: string;
+    location?: string;
+    employees?: string;
+    position?: string;
+    founded_year?: string;
+    capital?: string;
+    revenue?: string;
+    business_description?: string;
+    company_url?: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchCompanyData();
@@ -40,7 +51,17 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
         .maybeSingle();
 
       if (companyError) throw companyError;
-      if (companyData) setCompany(companyData);
+      if (companyData) {
+        setCompany(companyData);
+        if (companyData.master_company_id) {
+          const { data: masterRow } = await supabase
+            .from('master_companies')
+            .select('industry, location, employees, position, founded_year, capital, revenue, business_description, company_url')
+            .eq('id', companyData.master_company_id)
+            .maybeSingle();
+          if (masterRow) setMasterData(masterRow);
+        }
+      }
 
       let { data: noteData, error: noteError } = await supabase
         .from('company_notes')
@@ -321,6 +342,7 @@ export const CompanyNotePage = ({ companyId, onBack }: CompanyNotePageProps) => 
             companyNote={companyNote}
             companyMemos={companyMemos}
             referenceSites={referenceSites}
+            masterData={masterData}
             onUpdateNote={handleUpdateNote}
             onAddMemo={handleAddMemo}
             onUpdateMemo={handleUpdateMemo}

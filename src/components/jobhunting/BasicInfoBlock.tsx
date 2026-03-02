@@ -3,12 +3,25 @@ import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { CompanyNote, CustomField } from '../../types/company';
 import { EditModal } from './EditModal';
 
+type MasterData = {
+  industry?: string;
+  location?: string;
+  employees?: string;
+  position?: string;
+  founded_year?: string;
+  capital?: string;
+  revenue?: string;
+  business_description?: string;
+  company_url?: string;
+} | null;
+
 interface BasicInfoBlockProps {
   companyNote: CompanyNote;
+  masterData: MasterData;
   onUpdate: (updates: Partial<CompanyNote>) => void;
 }
 
-export const BasicInfoBlock = ({ companyNote, onUpdate }: BasicInfoBlockProps) => {
+export const BasicInfoBlock = ({ companyNote, masterData, onUpdate }: BasicInfoBlockProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     industry: companyNote.industry,
@@ -24,6 +37,29 @@ export const BasicInfoBlock = ({ companyNote, onUpdate }: BasicInfoBlockProps) =
   const [customFields, setCustomFields] = useState<CustomField[]>(
     companyNote.custom_fields || []
   );
+
+  const masterMap: Record<string, string | undefined> = {
+    industry: masterData?.industry,
+    location: masterData?.location,
+    employee_count: masterData?.employees,
+    job_type: masterData?.position,
+    founded_year: masterData?.founded_year,
+    capital: masterData?.capital,
+    revenue: masterData?.revenue,
+    business_description: masterData?.business_description,
+    website_url: masterData?.company_url,
+  };
+
+  const getDisplayValue = (key: string) => {
+    const master = masterMap[key];
+    if (master && master.trim() !== '') return master;
+    return formData[key as keyof typeof formData];
+  };
+
+  const isFromMaster = (key: string) => {
+    const master = masterMap[key];
+    return !!(master && master.trim() !== '');
+  };
 
   const handleSave = () => {
     onUpdate({
@@ -75,14 +111,18 @@ export const BasicInfoBlock = ({ companyNote, onUpdate }: BasicInfoBlockProps) =
 
         <div className="p-4">
           <div className="grid grid-cols-2 gap-3">
-            {fields.map(({ key, label }) => (
-              <div key={key} className="min-w-0">
-                <p className="text-xs text-gray-500 mb-1">{label}</p>
-                <p className="text-sm text-gray-900 truncate">
-                  {formData[key as keyof typeof formData] || '未設定'}
-                </p>
-              </div>
-            ))}
+            {fields.map(({ key, label }) => {
+              const fromMaster = isFromMaster(key);
+              const displayVal = getDisplayValue(key);
+              return (
+                <div key={key} className="min-w-0">
+                  <p className="text-xs text-gray-500 mb-1">{label}</p>
+                  <p className={`text-sm truncate ${fromMaster ? 'text-gray-500' : 'text-gray-900'}`}>
+                    {displayVal || '未設定'}
+                  </p>
+                </div>
+              );
+            })}
             {customFields.map((field, index) => (
               <div key={`custom-${index}`} className="min-w-0">
                 <p className="text-xs text-gray-500 mb-1">{field.label || '項目名なし'}</p>
@@ -100,17 +140,33 @@ export const BasicInfoBlock = ({ companyNote, onUpdate }: BasicInfoBlockProps) =
       >
         <div className="p-4 space-y-4">
           <div className="space-y-3">
-            {fields.map(({ key, label }) => (
-              <div key={key}>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                <input
-                  type="text"
-                  value={formData[key as keyof typeof formData]}
-                  onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FFA52F]"
-                />
-              </div>
-            ))}
+            {fields.map(({ key, label }) => {
+              const fromMaster = isFromMaster(key);
+              const masterVal = masterMap[key];
+              return (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                  {fromMaster ? (
+                    <>
+                      <input
+                        type="text"
+                        value={masterVal || ''}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-0.5">※企業マスターから自動取得</p>
+                    </>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData[key as keyof typeof formData]}
+                      onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FFA52F]"
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div className="border-t border-gray-200 pt-4">
