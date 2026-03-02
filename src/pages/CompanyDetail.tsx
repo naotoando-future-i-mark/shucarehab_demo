@@ -337,20 +337,20 @@ export default function CompanyDetail() {
 
         {/* 1. ヘッダー */}
         <div className="bg-white px-4 pt-4 pb-3 border-b border-gray-100 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center">
             <button
               onClick={() => navigate('/companies')}
               className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-gray-900 truncate">{company.name}</h1>
-            </div>
           </div>
         </div>
 
         <div className="px-4 pt-4">
+
+          {/* 企業名 */}
+          <h1 className="text-xl font-bold text-gray-900 text-center mb-3">{company.name}</h1>
 
           {/* 2. タグ */}
           {company.tags && company.tags.length > 0 && (
