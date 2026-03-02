@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Search, Plus, Upload, Pencil, Trash2, X, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
+import { Search, Plus, Upload, Pencil, Trash2, X, ChevronUp, ChevronDown, PlusCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { supabase } from '../../lib/supabase';
 
@@ -62,6 +62,32 @@ interface FormData {
   event_duration: string;
 }
 
+type WhiteLevel = 'normal' | 'high' | 'highest' | 'god';
+
+interface WhiteFeatureItem {
+  id: string;
+  iconName: string;
+  label: string;
+  value: string;
+  level: WhiteLevel;
+}
+
+interface JobInfoItem {
+  key: string;
+  value: string;
+}
+
+interface InternEventItem {
+  id: string;
+  title: string;
+  typeLabel: string;
+  date: string;
+  time: string;
+  deadline: string;
+  area: string;
+  duration: string;
+}
+
 const emptyForm: FormData = {
   name: '',
   industry: '',
@@ -96,15 +122,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
       <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1.5">
         {children}
       </h3>
-    </div>
-  );
-}
-
-function JsonOnlyNote({ label }: { label: string }) {
-  return (
-    <div className="col-span-2">
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <p className="text-xs text-gray-400">※ {label}はJSON形式で直接編集が必要です</p>
     </div>
   );
 }
@@ -172,6 +189,289 @@ function StringArrayEditor({
   );
 }
 
+function WhiteFeaturesEditor({
+  items,
+  onChange,
+}: {
+  items: WhiteFeatureItem[];
+  onChange: (v: WhiteFeatureItem[]) => void;
+}) {
+  const inputCls = 'border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300';
+
+  function addItem() {
+    onChange([
+      ...items,
+      { id: crypto.randomUUID(), iconName: '', label: '', value: '', level: 'normal' },
+    ]);
+  }
+
+  function removeItem(idx: number) {
+    onChange(items.filter((_, i) => i !== idx));
+  }
+
+  function updateItem(idx: number, field: keyof WhiteFeatureItem, val: string) {
+    onChange(items.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+  }
+
+  return (
+    <div className="col-span-2">
+      <label className="block text-xs font-medium text-gray-600 mb-2">ホワイト制度</label>
+      <div className="space-y-2 mb-2">
+        {items.map((item, idx) => (
+          <div key={item.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500 font-medium">#{idx + 1}</span>
+              <button type="button" onClick={() => removeItem(idx)} className="text-gray-400 hover:text-red-500 transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">アイコン名</p>
+                <input type="text" value={item.iconName} onChange={(e) => updateItem(idx, 'iconName', e.target.value)} className={`w-full ${inputCls}`} placeholder="例: 年間休日" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">ラベル</p>
+                <input type="text" value={item.label} onChange={(e) => updateItem(idx, 'label', e.target.value)} className={`w-full ${inputCls}`} placeholder="例: 年間休日" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">値</p>
+                <input type="text" value={item.value} onChange={(e) => updateItem(idx, 'value', e.target.value)} className={`w-full ${inputCls}`} placeholder="例: 120日以上" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">レベル</p>
+                <select value={item.level} onChange={(e) => updateItem(idx, 'level', e.target.value)} className={`w-full ${inputCls}`}>
+                  <option value="normal">normal</option>
+                  <option value="high">high</option>
+                  <option value="highest">highest</option>
+                  <option value="god">god</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1 px-3 py-2 text-xs border border-dashed border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors w-full justify-center"
+      >
+        <Plus size={13} />
+        追加
+      </button>
+    </div>
+  );
+}
+
+function SelectionFlowEditor({
+  steps,
+  onChange,
+}: {
+  steps: string[];
+  onChange: (v: string[]) => void;
+}) {
+  function addStep() {
+    onChange([...steps, '']);
+  }
+
+  function removeStep(idx: number) {
+    onChange(steps.filter((_, i) => i !== idx));
+  }
+
+  function updateStep(idx: number, val: string) {
+    onChange(steps.map((s, i) => i === idx ? val : s));
+  }
+
+  function moveUp(idx: number) {
+    if (idx === 0) return;
+    const next = [...steps];
+    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+    onChange(next);
+  }
+
+  function moveDown(idx: number) {
+    if (idx === steps.length - 1) return;
+    const next = [...steps];
+    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+    onChange(next);
+  }
+
+  return (
+    <div className="col-span-2">
+      <label className="block text-xs font-medium text-gray-600 mb-2">選考フロー</label>
+      <div className="space-y-1.5 mb-2">
+        {steps.map((step, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <span className="text-xs text-gray-400 w-4 text-right">{idx + 1}</span>
+            <input
+              type="text"
+              value={step}
+              onChange={(e) => updateStep(idx, e.target.value)}
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+              placeholder="例: ES提出"
+            />
+            <button type="button" onClick={() => moveUp(idx)} className="text-gray-400 hover:text-gray-600 transition-colors" disabled={idx === 0}>
+              <ArrowUp size={13} />
+            </button>
+            <button type="button" onClick={() => moveDown(idx)} className="text-gray-400 hover:text-gray-600 transition-colors" disabled={idx === steps.length - 1}>
+              <ArrowDown size={13} />
+            </button>
+            <button type="button" onClick={() => removeStep(idx)} className="text-gray-400 hover:text-red-500 transition-colors">
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addStep}
+        className="flex items-center gap-1 px-3 py-2 text-xs border border-dashed border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors w-full justify-center"
+      >
+        <Plus size={13} />
+        ステップ追加
+      </button>
+    </div>
+  );
+}
+
+function JobInfoEditor({
+  items,
+  onChange,
+}: {
+  items: JobInfoItem[];
+  onChange: (v: JobInfoItem[]) => void;
+}) {
+  function addItem() {
+    onChange([...items, { key: '', value: '' }]);
+  }
+
+  function removeItem(idx: number) {
+    onChange(items.filter((_, i) => i !== idx));
+  }
+
+  function updateItem(idx: number, field: 'key' | 'value', val: string) {
+    onChange(items.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+  }
+
+  return (
+    <div className="col-span-2">
+      <label className="block text-xs font-medium text-gray-600 mb-2">求人情報</label>
+      <div className="space-y-1.5 mb-2">
+        {items.map((item, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={item.key}
+              onChange={(e) => updateItem(idx, 'key', e.target.value)}
+              className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+              placeholder="項目名"
+            />
+            <input
+              type="text"
+              value={item.value}
+              onChange={(e) => updateItem(idx, 'value', e.target.value)}
+              className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+              placeholder="内容"
+            />
+            <button type="button" onClick={() => removeItem(idx)} className="text-gray-400 hover:text-red-500 transition-colors">
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1 px-3 py-2 text-xs border border-dashed border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors w-full justify-center"
+      >
+        <Plus size={13} />
+        項目追加
+      </button>
+    </div>
+  );
+}
+
+function InternInfoEditor({
+  items,
+  onChange,
+}: {
+  items: InternEventItem[];
+  onChange: (v: InternEventItem[]) => void;
+}) {
+  const inputCls = 'w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300';
+
+  function addItem() {
+    onChange([
+      ...items,
+      { id: crypto.randomUUID(), title: '', typeLabel: '', date: '', time: '', deadline: '', area: '', duration: '' },
+    ]);
+  }
+
+  function removeItem(idx: number) {
+    onChange(items.filter((_, i) => i !== idx));
+  }
+
+  function updateItem(idx: number, field: keyof InternEventItem, val: string) {
+    onChange(items.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+  }
+
+  return (
+    <div className="col-span-2">
+      <label className="block text-xs font-medium text-gray-600 mb-2">インターン情報</label>
+      <div className="space-y-2 mb-2">
+        {items.map((item, idx) => (
+          <div key={item.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500 font-medium">イベント #{idx + 1}</span>
+              <button type="button" onClick={() => removeItem(idx)} className="text-gray-400 hover:text-red-500 transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">タイトル</p>
+                <input type="text" value={item.title} onChange={(e) => updateItem(idx, 'title', e.target.value)} className={inputCls} placeholder="例: 1Day体験" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">種別ラベル</p>
+                <input type="text" value={item.typeLabel} onChange={(e) => updateItem(idx, 'typeLabel', e.target.value)} className={inputCls} placeholder="例: 仕事体験" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">日にち</p>
+                <input type="text" value={item.date} onChange={(e) => updateItem(idx, 'date', e.target.value)} className={inputCls} placeholder="例: 2025年6月1日" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">時間</p>
+                <input type="text" value={item.time} onChange={(e) => updateItem(idx, 'time', e.target.value)} className={inputCls} placeholder="例: 10:00-17:00" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">締切日</p>
+                <input type="text" value={item.deadline} onChange={(e) => updateItem(idx, 'deadline', e.target.value)} className={inputCls} placeholder="例: 2025年5月20日" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">エリア</p>
+                <input type="text" value={item.area} onChange={(e) => updateItem(idx, 'area', e.target.value)} className={inputCls} placeholder="例: 東京・大阪" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">期間</p>
+                <input type="text" value={item.duration} onChange={(e) => updateItem(idx, 'duration', e.target.value)} className={inputCls} placeholder="例: 半日" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1 px-3 py-2 text-xs border border-dashed border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors w-full justify-center"
+      >
+        <Plus size={13} />
+        イベント追加
+      </button>
+    </div>
+  );
+}
+
 export default function AdminCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,6 +479,10 @@ export default function AdminCompanies() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Company | null>(null);
   const [formData, setFormData] = useState<FormData>(emptyForm);
+  const [whiteFeatures, setWhiteFeatures] = useState<WhiteFeatureItem[]>([]);
+  const [selectionFlow, setSelectionFlow] = useState<string[]>([]);
+  const [jobInfo, setJobInfo] = useState<JobInfoItem[]>([]);
+  const [internInfo, setInternInfo] = useState<InternEventItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
@@ -220,9 +524,51 @@ export default function AdminCompanies() {
     }
   }
 
+  function parseWhiteFeatures(raw: unknown): WhiteFeatureItem[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item: Record<string, unknown>) => ({
+      id: typeof item.id === 'string' ? item.id : crypto.randomUUID(),
+      iconName: typeof item.iconName === 'string' ? item.iconName : '',
+      label: typeof item.label === 'string' ? item.label : '',
+      value: typeof item.value === 'string' ? item.value : '',
+      level: (['normal', 'high', 'highest', 'god'].includes(item.level as string) ? item.level : 'normal') as WhiteLevel,
+    }));
+  }
+
+  function parseSelectionFlow(raw: unknown): string[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((s) => (typeof s === 'string' ? s : String(s)));
+  }
+
+  function parseJobInfo(raw: unknown): JobInfoItem[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item: Record<string, unknown>) => ({
+      key: typeof item.key === 'string' ? item.key : '',
+      value: typeof item.value === 'string' ? item.value : '',
+    }));
+  }
+
+  function parseInternInfo(raw: unknown): InternEventItem[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item: Record<string, unknown>) => ({
+      id: typeof item.id === 'string' ? item.id : crypto.randomUUID(),
+      title: typeof item.title === 'string' ? item.title : '',
+      typeLabel: typeof item.typeLabel === 'string' ? item.typeLabel : '',
+      date: typeof item.date === 'string' ? item.date : '',
+      time: typeof item.time === 'string' ? item.time : '',
+      deadline: typeof item.deadline === 'string' ? item.deadline : '',
+      area: typeof item.area === 'string' ? item.area : '',
+      duration: typeof item.duration === 'string' ? item.duration : '',
+    }));
+  }
+
   function openCreate() {
     setEditTarget(null);
     setFormData(emptyForm);
+    setWhiteFeatures([]);
+    setSelectionFlow([]);
+    setJobInfo([]);
+    setInternInfo([]);
     setError(null);
     setModalOpen(true);
   }
@@ -254,6 +600,10 @@ export default function AdminCompanies() {
       event_area: company.event_area ?? '',
       event_duration: company.event_duration ?? '',
     });
+    setWhiteFeatures(parseWhiteFeatures(company.white_features));
+    setSelectionFlow(parseSelectionFlow(company.selection_flow));
+    setJobInfo(parseJobInfo(company.job_info));
+    setInternInfo(parseInternInfo(company.intern_info));
     setError(null);
     setModalOpen(true);
   }
@@ -262,6 +612,10 @@ export default function AdminCompanies() {
     setModalOpen(false);
     setEditTarget(null);
     setFormData(emptyForm);
+    setWhiteFeatures([]);
+    setSelectionFlow([]);
+    setJobInfo([]);
+    setInternInfo([]);
     setError(null);
   }
 
@@ -297,6 +651,10 @@ export default function AdminCompanies() {
       event_period: formData.event_period || null,
       event_area: formData.event_area || null,
       event_duration: formData.event_duration || null,
+      white_features: whiteFeatures.length > 0 ? whiteFeatures : null,
+      selection_flow: selectionFlow.length > 0 ? selectionFlow : null,
+      job_info: jobInfo.length > 0 ? jobInfo : null,
+      intern_info: internInfo.length > 0 ? internInfo : null,
     };
 
     let err;
@@ -759,10 +1117,10 @@ export default function AdminCompanies() {
                   onChange={(v) => setFormData({ ...formData, tags: v })}
                 />
 
-                <JsonOnlyNote label="ホワイト制度" />
-                <JsonOnlyNote label="選考フロー" />
-                <JsonOnlyNote label="求人情報" />
-                <JsonOnlyNote label="インターン情報" />
+                <WhiteFeaturesEditor items={whiteFeatures} onChange={setWhiteFeatures} />
+                <SelectionFlowEditor steps={selectionFlow} onChange={setSelectionFlow} />
+                <JobInfoEditor items={jobInfo} onChange={setJobInfo} />
+                <InternInfoEditor items={internInfo} onChange={setInternInfo} />
 
               </div>
             </div>
