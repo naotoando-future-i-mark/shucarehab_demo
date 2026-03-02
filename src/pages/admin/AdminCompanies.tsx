@@ -3,6 +3,19 @@ import { Search, Plus, Upload, Pencil, Trash2, X, ChevronUp, ChevronDown, PlusCi
 import AdminLayout from '../../components/admin/AdminLayout';
 import { supabase } from '../../lib/supabase';
 
+const WHITE_FEATURE_LABELS = [
+  '年間休日',
+  '月残業',
+  '離職率',
+  'ボーナス',
+  '有給消化',
+  '特別休暇',
+  '特別休暇（種類）',
+  'リモート',
+  'フレックス',
+  '育児休暇',
+] as const;
+
 interface Company {
   id: string;
   name: string;
@@ -56,21 +69,9 @@ interface FormData {
   is_premium: boolean;
   premium_image: string;
   is_urgent: boolean;
-  event_title: string;
-  event_period: string;
-  event_area: string;
-  event_duration: string;
 }
 
 type WhiteLevel = 'normal' | 'high' | 'highest' | 'god';
-
-interface WhiteFeatureItem {
-  id: string;
-  iconName: string;
-  label: string;
-  value: string;
-  level: WhiteLevel;
-}
 
 interface JobInfoItem {
   key: string;
@@ -108,11 +109,32 @@ const emptyForm: FormData = {
   is_premium: false,
   premium_image: '',
   is_urgent: false,
-  event_title: '',
-  event_period: '',
-  event_area: '',
-  event_duration: '',
 };
+
+type FixedWhiteFeatureItem = {
+  label: string;
+  iconName: string;
+  value: string;
+  level: WhiteLevel;
+};
+
+function makeEmptyWhiteFeatures(): FixedWhiteFeatureItem[] {
+  return WHITE_FEATURE_LABELS.map((label) => ({ label, iconName: label, value: '', level: 'normal' as WhiteLevel }));
+}
+
+function parseWhiteFeaturesFixed(raw: unknown): FixedWhiteFeatureItem[] {
+  const base = makeEmptyWhiteFeatures();
+  if (!Array.isArray(raw)) return base;
+  return base.map((item) => {
+    const match = (raw as Record<string, unknown>[]).find((r) => r.label === item.label);
+    if (!match) return item;
+    return {
+      ...item,
+      value: typeof match.value === 'string' ? match.value : '',
+      level: (['normal', 'high', 'highest', 'god'].includes(match.level as string) ? match.level : 'normal') as WhiteLevel,
+    };
+  });
+}
 
 type SortKey = 'name' | 'industry' | 'employees' | 'location' | 'created_at';
 
@@ -193,72 +215,42 @@ function WhiteFeaturesEditor({
   items,
   onChange,
 }: {
-  items: WhiteFeatureItem[];
-  onChange: (v: WhiteFeatureItem[]) => void;
+  items: FixedWhiteFeatureItem[];
+  onChange: (v: FixedWhiteFeatureItem[]) => void;
 }) {
   const inputCls = 'border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300';
 
-  function addItem() {
-    onChange([
-      ...items,
-      { id: crypto.randomUUID(), iconName: '', label: '', value: '', level: 'normal' },
-    ]);
-  }
-
-  function removeItem(idx: number) {
-    onChange(items.filter((_, i) => i !== idx));
-  }
-
-  function updateItem(idx: number, field: keyof WhiteFeatureItem, val: string) {
+  function updateItem(idx: number, field: 'value' | 'level', val: string) {
     onChange(items.map((item, i) => i === idx ? { ...item, [field]: val } : item));
   }
 
   return (
     <div className="col-span-2">
       <label className="block text-xs font-medium text-gray-600 mb-2">ホワイト制度</label>
-      <div className="space-y-2 mb-2">
+      <div className="space-y-1.5">
         {items.map((item, idx) => (
-          <div key={item.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 font-medium">#{idx + 1}</span>
-              <button type="button" onClick={() => removeItem(idx)} className="text-gray-400 hover:text-red-500 transition-colors">
-                <X size={14} />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">アイコン名</p>
-                <input type="text" value={item.iconName} onChange={(e) => updateItem(idx, 'iconName', e.target.value)} className={`w-full ${inputCls}`} placeholder="例: 年間休日" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">ラベル</p>
-                <input type="text" value={item.label} onChange={(e) => updateItem(idx, 'label', e.target.value)} className={`w-full ${inputCls}`} placeholder="例: 年間休日" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">値</p>
-                <input type="text" value={item.value} onChange={(e) => updateItem(idx, 'value', e.target.value)} className={`w-full ${inputCls}`} placeholder="例: 120日以上" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">レベル</p>
-                <select value={item.level} onChange={(e) => updateItem(idx, 'level', e.target.value)} className={`w-full ${inputCls}`}>
-                  <option value="normal">normal</option>
-                  <option value="high">high</option>
-                  <option value="highest">highest</option>
-                  <option value="god">god</option>
-                </select>
-              </div>
-            </div>
+          <div key={item.label} className="flex items-center gap-2">
+            <span className="w-28 text-xs text-gray-700 font-medium shrink-0">{item.label}</span>
+            <input
+              type="text"
+              value={item.value}
+              onChange={(e) => updateItem(idx, 'value', e.target.value)}
+              className={`flex-1 ${inputCls}`}
+              placeholder="値を入力"
+            />
+            <select
+              value={item.level}
+              onChange={(e) => updateItem(idx, 'level', e.target.value)}
+              className={`w-24 ${inputCls}`}
+            >
+              <option value="normal">normal</option>
+              <option value="high">high</option>
+              <option value="highest">highest</option>
+              <option value="god">god</option>
+            </select>
           </div>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={addItem}
-        className="flex items-center gap-1 px-3 py-2 text-xs border border-dashed border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors w-full justify-center"
-      >
-        <Plus size={13} />
-        追加
-      </button>
     </div>
   );
 }
@@ -479,7 +471,7 @@ export default function AdminCompanies() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Company | null>(null);
   const [formData, setFormData] = useState<FormData>(emptyForm);
-  const [whiteFeatures, setWhiteFeatures] = useState<WhiteFeatureItem[]>([]);
+  const [whiteFeatures, setWhiteFeatures] = useState<FixedWhiteFeatureItem[]>(makeEmptyWhiteFeatures());
   const [selectionFlow, setSelectionFlow] = useState<string[]>([]);
   const [jobInfo, setJobInfo] = useState<JobInfoItem[]>([]);
   const [internInfo, setInternInfo] = useState<InternEventItem[]>([]);
@@ -524,17 +516,6 @@ export default function AdminCompanies() {
     }
   }
 
-  function parseWhiteFeatures(raw: unknown): WhiteFeatureItem[] {
-    if (!Array.isArray(raw)) return [];
-    return raw.map((item: Record<string, unknown>) => ({
-      id: typeof item.id === 'string' ? item.id : crypto.randomUUID(),
-      iconName: typeof item.iconName === 'string' ? item.iconName : '',
-      label: typeof item.label === 'string' ? item.label : '',
-      value: typeof item.value === 'string' ? item.value : '',
-      level: (['normal', 'high', 'highest', 'god'].includes(item.level as string) ? item.level : 'normal') as WhiteLevel,
-    }));
-  }
-
   function parseSelectionFlow(raw: unknown): string[] {
     if (!Array.isArray(raw)) return [];
     return raw.map((s) => (typeof s === 'string' ? s : String(s)));
@@ -565,7 +546,7 @@ export default function AdminCompanies() {
   function openCreate() {
     setEditTarget(null);
     setFormData(emptyForm);
-    setWhiteFeatures([]);
+    setWhiteFeatures(makeEmptyWhiteFeatures());
     setSelectionFlow([]);
     setJobInfo([]);
     setInternInfo([]);
@@ -595,12 +576,8 @@ export default function AdminCompanies() {
       is_premium: company.is_premium ?? false,
       premium_image: company.premium_image ?? '',
       is_urgent: company.is_urgent ?? false,
-      event_title: company.event_title ?? '',
-      event_period: company.event_period ?? '',
-      event_area: company.event_area ?? '',
-      event_duration: company.event_duration ?? '',
     });
-    setWhiteFeatures(parseWhiteFeatures(company.white_features));
+    setWhiteFeatures(parseWhiteFeaturesFixed(company.white_features));
     setSelectionFlow(parseSelectionFlow(company.selection_flow));
     setJobInfo(parseJobInfo(company.job_info));
     setInternInfo(parseInternInfo(company.intern_info));
@@ -612,7 +589,7 @@ export default function AdminCompanies() {
     setModalOpen(false);
     setEditTarget(null);
     setFormData(emptyForm);
-    setWhiteFeatures([]);
+    setWhiteFeatures(makeEmptyWhiteFeatures());
     setSelectionFlow([]);
     setJobInfo([]);
     setInternInfo([]);
@@ -647,11 +624,7 @@ export default function AdminCompanies() {
       is_premium: formData.is_premium,
       premium_image: formData.premium_image || null,
       is_urgent: formData.is_urgent,
-      event_title: formData.event_title || null,
-      event_period: formData.event_period || null,
-      event_area: formData.event_area || null,
-      event_duration: formData.event_duration || null,
-      white_features: whiteFeatures.length > 0 ? whiteFeatures : null,
+      white_features: whiteFeatures.some((w) => w.value) ? whiteFeatures : null,
       selection_flow: selectionFlow.length > 0 ? selectionFlow : null,
       job_info: jobInfo.length > 0 ? jobInfo : null,
       intern_info: internInfo.length > 0 ? internInfo : null,
@@ -1035,49 +1008,7 @@ export default function AdminCompanies() {
 
                 <SectionTitle>イベント情報</SectionTitle>
 
-                <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">イベントタイトル</label>
-                  <input
-                    type="text"
-                    value={formData.event_title}
-                    onChange={(e) => setFormData({ ...formData, event_title: e.target.value })}
-                    className={inputCls}
-                    placeholder="例: 会社説明会"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">イベント期間</label>
-                  <input
-                    type="text"
-                    value={formData.event_period}
-                    onChange={(e) => setFormData({ ...formData, event_period: e.target.value })}
-                    className={inputCls}
-                    placeholder="例: 3月〜4月"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">イベントエリア</label>
-                  <input
-                    type="text"
-                    value={formData.event_area}
-                    onChange={(e) => setFormData({ ...formData, event_area: e.target.value })}
-                    className={inputCls}
-                    placeholder="例: 東京・大阪"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">所要時間</label>
-                  <input
-                    type="text"
-                    value={formData.event_duration}
-                    onChange={(e) => setFormData({ ...formData, event_duration: e.target.value })}
-                    className={inputCls}
-                    placeholder="例: 90分"
-                  />
-                </div>
+                <InternInfoEditor items={internInfo} onChange={setInternInfo} />
 
                 <SectionTitle>URL</SectionTitle>
 
@@ -1105,22 +1036,28 @@ export default function AdminCompanies() {
 
                 <SectionTitle>詳細データ</SectionTitle>
 
-                <StringArrayEditor
-                  label="企業ポイント"
-                  values={formData.points}
-                  onChange={(v) => setFormData({ ...formData, points: v })}
-                />
+                {formData.is_premium && (
+                  <StringArrayEditor
+                    label="企業ポイント"
+                    values={formData.points}
+                    onChange={(v) => setFormData({ ...formData, points: v })}
+                  />
+                )}
 
-                <StringArrayEditor
-                  label="タグ"
-                  values={formData.tags}
-                  onChange={(v) => setFormData({ ...formData, tags: v })}
-                />
+                {formData.is_premium && (
+                  <StringArrayEditor
+                    label="タグ"
+                    values={formData.tags}
+                    onChange={(v) => setFormData({ ...formData, tags: v })}
+                  />
+                )}
 
-                <WhiteFeaturesEditor items={whiteFeatures} onChange={setWhiteFeatures} />
+                {formData.is_premium && (
+                  <WhiteFeaturesEditor items={whiteFeatures} onChange={setWhiteFeatures} />
+                )}
+
                 <SelectionFlowEditor steps={selectionFlow} onChange={setSelectionFlow} />
                 <JobInfoEditor items={jobInfo} onChange={setJobInfo} />
-                <InternInfoEditor items={internInfo} onChange={setInternInfo} />
 
               </div>
             </div>
