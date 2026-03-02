@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, Plus, Calendar, Star, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Plus, Calendar, Star, ExternalLink, Building2, MapPin, Users } from 'lucide-react';
 import { useRouter } from '../router/Router';
 import { supabase } from '../lib/supabase';
 import { MemoEditorModal } from '../components/jobhunting/MemoEditorModal';
@@ -306,8 +306,8 @@ export default function CompanyDetail() {
 
   const levelBadgeClass = (level: WhiteLevel) => {
     const map: Record<WhiteLevel, string> = {
-      god: 'bg-yellow-400 text-white',
-      highest: 'bg-purple-400 text-white',
+      god: 'bg-yellow-400 text-yellow-900',
+      highest: 'bg-red-400 text-white',
       high: 'bg-blue-400 text-white',
       normal: 'bg-gray-300 text-gray-700',
     };
@@ -317,7 +317,7 @@ export default function CompanyDetail() {
   const levelBadgeLabel = (level: WhiteLevel) => {
     const map: Record<WhiteLevel, string> = {
       god: '神レベル',
-      highest: '最高',
+      highest: '最高レベル',
       high: '高レベル',
       normal: '普通',
     };
@@ -326,18 +326,10 @@ export default function CompanyDetail() {
 
   const displayVal = (v: string | null | undefined) => (v && v.trim() !== '' ? v : '-');
 
-  const overviewItems = [
-    { label: '業種', value: displayVal(company.industry) },
-    { label: '本社所在地', value: displayVal(company.location) },
-    { label: '従業員数', value: displayVal(company.employees) },
-    { label: '職種', value: displayVal(company.position) },
-    { label: '設立年', value: displayVal(company.founded_year) },
-    { label: '資本金', value: displayVal(company.capital) },
-    { label: '売上高', value: displayVal(company.revenue) },
-  ];
+  const hasValidValue = (v: string | null | undefined) => !!(v && v.trim() !== '' && v !== '-');
 
   const hasDate = (event: InternEvent) =>
-    event.date && event.date.trim() !== '' && event.date !== '-';
+    hasValidValue(event.date) || hasValidValue(event.deadline);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -356,29 +348,52 @@ export default function CompanyDetail() {
               <h1 className="text-xl font-bold text-gray-900 truncate">{company.name}</h1>
             </div>
           </div>
-          {company.is_premium && (
-            <div className="mt-2 flex justify-start pl-9">
-              <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-400 to-pink-400 text-white text-xs px-3 py-1 rounded-full font-medium">
-                <Star size={10} fill="currentColor" /> プレミアム掲載企業
-              </span>
-            </div>
-          )}
         </div>
 
-        <div className="px-4 pt-4 space-y-0">
+        <div className="px-4 pt-4">
 
-          {/* 2. ヒーロー画像（プレミアムのみ） */}
-          {company.is_premium && company.premium_image && (
-            <div className="mb-4">
+          {/* 2. タグ */}
+          {company.tags && company.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {company.tags.map((tag, i) => (
+                <span key={i} className="text-xs px-2.5 py-1 bg-orange-50 text-orange-600 border border-orange-200 rounded-full font-medium">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* 3. ヒーロー画像 */}
+          {company.premium_image && (
+            <div className="w-full rounded-xl overflow-hidden mb-4">
               <img
                 src={company.premium_image}
                 alt={company.name}
-                className="w-full h-48 object-cover rounded-xl shadow-sm"
+                className="w-full h-48 object-cover"
               />
             </div>
           )}
 
-          {/* 3. 就活ノート追加ボタン */}
+          {/* 4. 業界・本社・従業員の3行表示 */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <Building2 size={16} className="text-gray-400 flex-shrink-0" />
+              <span className="text-gray-400 text-xs w-12">業界</span>
+              <span>{displayVal(company.industry)}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <MapPin size={16} className="text-gray-400 flex-shrink-0" />
+              <span className="text-gray-400 text-xs w-12">本社</span>
+              <span>{displayVal(company.location)}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <Users size={16} className="text-gray-400 flex-shrink-0" />
+              <span className="text-gray-400 text-xs w-12">従業員</span>
+              <span>{displayVal(company.employees)}</span>
+            </div>
+          </div>
+
+          {/* 5. 就活ノート追加ボタン */}
           <div className="mb-4">
             {isInNote ? (
               <p className="text-gray-400 text-sm text-center py-2">✓ 就活ノートに追加済み</p>
@@ -392,7 +407,7 @@ export default function CompanyDetail() {
             )}
           </div>
 
-          {/* 4. タブ切り替え（追加済みのみ） */}
+          {/* 6. タブ切り替え（追加済みのみ） */}
           {isInNote && (
             <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
               <button
@@ -418,54 +433,36 @@ export default function CompanyDetail() {
             </div>
           )}
 
-          {/* 5. 企業データタブ */}
+          {/* 7. 企業データタブ */}
           {activeTab === 'data' && (
             <div className="space-y-4">
 
-              {/* タグ */}
-              {company.tags && company.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {company.tags.map((tag, i) => (
-                    <span key={i} className="text-xs px-2.5 py-1 bg-orange-50 text-orange-600 border border-orange-200 rounded-full font-medium">
-                      {tag}
-                    </span>
-                  ))}
+              {/* a. ホワイト制度（プレミアム＋データありのみ） */}
+              {company.is_premium && company.white_features && company.white_features.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                  <div className="inline-block px-3 py-1 bg-orange-500 text-white text-xs font-medium rounded mb-4">
+                    ホワイト制度
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {company.white_features.map((feature) => (
+                      <div key={feature.id} className="flex flex-col items-center">
+                        <span className={`text-[9px] px-1 py-0.5 rounded font-medium mb-1 text-center whitespace-nowrap ${levelBadgeClass(feature.level)}`}>
+                          {levelBadgeLabel(feature.level)}
+                        </span>
+                        <div className="w-12 h-12 bg-orange-50 rounded-lg border border-orange-200 flex items-center justify-center mb-1">
+                          <span className="text-orange-500 text-sm font-bold">{feature.iconName?.slice(0, 2) ?? '★'}</span>
+                        </div>
+                        <span className="text-[9px] text-gray-500 text-center leading-tight">{feature.label}</span>
+                        <span className="text-[9px] text-gray-800 text-center font-medium mt-0.5 leading-tight whitespace-pre-line">{feature.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* セクション A: 会社概要 */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
-                <h2 className="font-bold text-gray-800 mb-3 text-base">会社概要</h2>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  {overviewItems.map((item) => (
-                    <div key={item.label}>
-                      <p className="text-xs text-gray-400 mb-0.5">{item.label}</p>
-                      <p className="text-sm text-gray-800 font-medium">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-                {company.business_description && (
-                  <div className="border-t border-gray-100 pt-3 mt-1">
-                    <p className="text-xs text-gray-400 mb-1">事業内容</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">{company.business_description}</p>
-                  </div>
-                )}
-                {company.company_url && (
-                  <a
-                    href={company.company_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-orange-500 underline text-sm mt-3"
-                  >
-                    <ExternalLink size={14} />
-                    企業HPを見る
-                  </a>
-                )}
-              </div>
-
-              {/* セクション B: 企業ポイント（プレミアムのみ） */}
+              {/* b. 企業ポイント（プレミアム＋データありのみ） */}
               {company.is_premium && company.points && company.points.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                   <h2 className="font-bold text-gray-800 mb-3 text-base flex items-center gap-1.5">
                     <Star size={16} className="text-orange-400" fill="#FFA52F" />
                     企業ポイント
@@ -483,32 +480,53 @@ export default function CompanyDetail() {
                 </div>
               )}
 
-              {/* セクション C: ホワイト制度（プレミアムのみ） */}
-              {company.is_premium && company.white_features && company.white_features.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
-                  <h2 className="font-bold text-gray-800 mb-3 text-base">ホワイト制度</h2>
-                  <div className="flex overflow-x-auto gap-3 pb-2">
-                    {company.white_features.map((feature) => (
-                      <div
-                        key={feature.id}
-                        className="w-24 flex-shrink-0 flex flex-col items-center bg-orange-50 rounded-xl p-2 border border-orange-100"
-                      >
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium mb-1.5 ${levelBadgeClass(feature.level)}`}>
-                          {levelBadgeLabel(feature.level)}
-                        </span>
-                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center mb-1 shadow-sm border border-orange-100">
-                          <span className="text-orange-500 text-sm font-bold">{feature.iconName?.slice(0, 2) ?? '★'}</span>
-                        </div>
-                        <span className="text-[10px] text-gray-500 text-center leading-tight">{feature.label}</span>
-                        <span className="text-[10px] text-gray-800 text-center font-medium mt-0.5 leading-tight whitespace-pre-line">{feature.value}</span>
+              {/* c. 基本データ（アコーディオン） */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('basic')}
+                  className="w-full px-4 py-3.5 flex items-center justify-between"
+                >
+                  <span className="font-bold text-gray-800 text-base">基本データ</span>
+                  {openSections.includes('basic')
+                    ? <ChevronUp size={20} className="text-gray-400" />
+                    : <ChevronDown size={20} className="text-gray-400" />}
+                </button>
+                {openSections.includes('basic') && (
+                  <div className="px-4 pb-4 space-y-3">
+                    {[
+                      { label: '職種', value: displayVal(company.position) },
+                      { label: '設立年', value: displayVal(company.founded_year) },
+                      { label: '資本金', value: displayVal(company.capital) },
+                      { label: '売上高', value: displayVal(company.revenue) },
+                    ].map((item) => (
+                      <div key={item.label}>
+                        <p className="text-xs text-gray-400 mb-0.5">{item.label}</p>
+                        <p className="text-sm text-gray-800 font-medium">{item.value}</p>
                       </div>
                     ))}
+                    {company.business_description && (
+                      <div>
+                        <p className="text-xs text-gray-400 mb-0.5">事業内容</p>
+                        <p className="text-sm text-gray-700 leading-relaxed">{company.business_description}</p>
+                      </div>
+                    )}
+                    {company.company_url && (
+                      <a
+                        href={company.company_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-orange-500 underline text-sm"
+                      >
+                        <ExternalLink size={14} />
+                        企業HPを見る
+                      </a>
+                    )}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* セクション D: インターン・イベント情報 */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+              {/* d. インターン・イベント情報 */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <button
                   onClick={() => toggleSection('intern')}
                   className="w-full px-4 py-3.5 flex items-center justify-between"
@@ -528,7 +546,7 @@ export default function CompanyDetail() {
                           <div key={event.id} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
                             <p className="font-medium text-gray-800 text-sm mb-2">{event.title}</p>
                             <div className="space-y-1">
-                              {event.deadline && event.deadline !== '-' && (
+                              {hasValidValue(event.deadline) && (
                                 <div className="flex items-center gap-2">
                                   <span className="px-2 py-0.5 bg-red-100 text-red-500 text-xs rounded-full font-medium">応募締切</span>
                                   <span className="text-orange-500 text-sm font-medium">{event.deadline}</span>
@@ -563,8 +581,8 @@ export default function CompanyDetail() {
                 )}
               </div>
 
-              {/* セクション E: 求人情報 */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+              {/* e. 求人情報 */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <button
                   onClick={() => toggleSection('job')}
                   className="w-full px-4 py-3.5 flex items-center justify-between"
@@ -604,8 +622,8 @@ export default function CompanyDetail() {
                 )}
               </div>
 
-              {/* セクション F: 選考フロー */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+              {/* f. 選考フロー */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <button
                   onClick={() => toggleSection('flow')}
                   className="w-full px-4 py-3.5 flex items-center justify-between"
@@ -640,8 +658,8 @@ export default function CompanyDetail() {
                 )}
               </div>
 
-              {/* セクション G: 日程 */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+              {/* g. 日程 */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <button
                   onClick={() => toggleSection('schedule')}
                   className="w-full px-4 py-3.5 flex items-center justify-between"
@@ -695,7 +713,7 @@ export default function CompanyDetail() {
             </div>
           )}
 
-          {/* 6. 就活メモタブ */}
+          {/* 就活メモタブ */}
           {isInNote && activeTab === 'memo' && (
             <div className="space-y-4 pb-4">
               {!companyNoteId ? (
