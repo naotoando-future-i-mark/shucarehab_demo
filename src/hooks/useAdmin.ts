@@ -11,39 +11,28 @@ export function useAdmin() {
     const checkAdmin = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        console.log('useAdmin: user =', user?.id);
         if (!user) {
-          if (mounted) {
-            setIsAdmin(false);
-            setIsLoading(false);
-          }
+          if (mounted) { setIsAdmin(false); setIsLoading(false); }
           return;
         }
 
         const { data, error } = await supabase
-          .from('admin_users')
-          .select('user_id')
+          .from('user_profiles')
+          .select('role')
           .eq('user_id', user.id)
           .maybeSingle();
-        console.log('useAdmin: admin query result =', { data, error });
 
         if (mounted) {
-          setIsAdmin(!error && data !== null);
+          setIsAdmin(!error && data?.role === 'admin');
           setIsLoading(false);
         }
       } catch {
-        if (mounted) {
-          setIsAdmin(false);
-          setIsLoading(false);
-        }
+        if (mounted) { setIsAdmin(false); setIsLoading(false); }
       }
     };
 
     checkAdmin();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   return { isAdmin, isLoading };
