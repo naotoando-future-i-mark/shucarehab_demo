@@ -16,6 +16,19 @@ type WhiteFeatureData = {
   level: WhiteLevel;
 };
 
+type MasterEvent = {
+  id: string;
+  company_id: string;
+  title: string;
+  event_type: string;
+  date: string | null;
+  time: string | null;
+  deadline: string | null;
+  area: string | null;
+  duration: string | null;
+  memo: string | null;
+};
+
 type Company = {
   id: string;
   name: string;
@@ -69,6 +82,7 @@ type CompanyMemo = {
 export default function CompanyDetail() {
   const { navigate } = useRouter();
   const [company, setCompany] = useState<Company | null>(null);
+  const [events, setEvents] = useState<MasterEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'data' | 'memo'>('data');
   const [openSections, setOpenSections] = useState<string[]>(['basic', 'intern']);
@@ -103,6 +117,13 @@ export default function CompanyDetail() {
       if (!error && data) {
         setCompany(data as Company);
         loadCompanyNote(data.id, data.name);
+
+        const { data: eventsData } = await supabase
+          .from('master_events')
+          .select('*')
+          .eq('company_id', companyId)
+          .order('deadline', { ascending: true });
+        setEvents((eventsData ?? []) as MasterEvent[]);
       }
       setLoading(false);
     }
@@ -270,20 +291,16 @@ export default function CompanyDetail() {
     );
   };
 
-  const internEvents: InternEvent[] = company.intern_info && Array.isArray(company.intern_info) && company.intern_info.length > 0
-    ? (company.intern_info as InternEvent[])
-    : company.event_title
-      ? [{
-          id: '1',
-          title: company.event_title,
-          typeLabel: '仕事体験',
-          date: '',
-          time: '-',
-          deadline: company.deadline || '-',
-          area: company.event_area || '',
-          duration: company.event_duration || '',
-        }]
-      : [];
+  const internEvents: InternEvent[] = events.map((e) => ({
+    id: e.id,
+    title: e.title,
+    typeLabel: e.event_type,
+    date: e.date ?? '',
+    time: e.time ?? '-',
+    deadline: e.deadline ?? '-',
+    area: e.area ?? '',
+    duration: e.duration ?? '',
+  }));
 
   const handleAddToCalendar = (event: InternEvent) => {
     const calendarEventData = {

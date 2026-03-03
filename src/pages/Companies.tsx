@@ -3,6 +3,16 @@ import { Search, ArrowLeft, Calendar, MapPin, Clock, Briefcase, Building2, Users
 import { useRouter } from '../router/Router';
 import { supabase } from '../lib/supabase';
 
+type MasterEvent = {
+  id: string;
+  company_id: string;
+  title: string;
+  event_type: string;
+  deadline: string | null;
+  area: string | null;
+  duration: string | null;
+};
+
 type Company = {
   id: string;
   name: string;
@@ -22,6 +32,7 @@ type Company = {
   eventDuration?: string;
   position?: string;
   tags?: string[];
+  events?: MasterEvent[];
 };
 
 const industryOptions = ['IT・通信', 'IT・インターネット', 'ソフトウェア', '商社', '金融', 'メーカー', 'コンサルティング', '広告・マーケティング', '人材・教育', '精密・医療機器', '冠婚葬祭'];
@@ -42,11 +53,33 @@ const areaOptions = ['東京', '大阪', '京都', '愛知', '福岡', 'オン�
 const workLocationOptions = ['東京', '大阪', '京都', '愛知', '福岡', 'その他'];
 const annualLeaveOptions = ['指定なし', '120日以上', '125日以上'];
 
+function parseJaDate(str: string): Date | null {
+  const jaMatch = str.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  if (jaMatch) {
+    return new Date(Number(jaMatch[1]), Number(jaMatch[2]) - 1, Number(jaMatch[3]));
+  }
+  const jaMonthMatch = str.match(/(\d{4})年(\d{1,2})月/);
+  if (jaMonthMatch) {
+    return new Date(Number(jaMonthMatch[1]), Number(jaMonthMatch[2]) - 1, 1);
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function getNearestDeadline(events: MasterEvent[]): Date | null {
+  const dates = events
+    .map((e) => (e.deadline ? parseJaDate(e.deadline) : null))
+    .filter((d): d is Date => d !== null);
+  if (dates.length === 0) return null;
+  return dates.reduce((min, d) => (d < min ? d : min));
+}
+
 export default function Companies() {
   const { navigate } = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDetailSearchOpen, setIsDetailSearchOpen] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [allEvents, setAllEvents] = useState<MasterEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('all');
@@ -75,14 +108,23 @@ export default function Companies() {
 
   const loadCompanies = async () => {
     try {
-      const { data, error } = await supabase
-        .from('master_companies')
-        .select('*')
-        .order('is_premium', { ascending: false });
+      const [companiesRes, eventsRes] = await Promise.all([
+        supabase
+          .from('master_companies')
+          .select('*')
+          .order('is_premium', { ascending: false }),
+        supabase
+          .from('master_events')
+          .select('id, company_id, title, event_type, deadline, area, duration')
+          .order('deadline', { ascending: true }),
+      ]);
 
-      if (error) throw error;
+      if (companiesRes.error) throw companiesRes.error;
 
-      const mappedCompanies: Company[] = (data ?? []).map(c => ({
+      const fetchedEvents = (eventsRes.data ?? []) as MasterEvent[];
+      setAllEvents(fetchedEvents);
+
+      const mappedCompanies: Company[] = (companiesRes.data ?? []).map(c => ({
         id: c.id,
         name: c.name,
         tag: c.tag || 'インターン',
@@ -101,6 +143,7 @@ export default function Companies() {
         eventDuration: c.event_duration,
         position: c.position,
         tags: c.tags,
+        events: fetchedEvents.filter(e => e.company_id === c.id),
       }));
       setCompanies(mappedCompanies);
     } catch (error) {
@@ -153,11 +196,21 @@ export default function Companies() {
       const now = new Date();
       const limit = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       filtered = filtered.filter((c) => {
-        if (!c.deadline) return false;
-        const d = new Date(c.deadline);
-        return d >= now && d <= limit;
+        if (!c.events || c.events.length === 0) return false;
+        return c.events.some((ev) => {
+          if (!ev.deadline) return false;
+          const d = parseJaDate(ev.deadline);
+          return d !== null && d >= now && d <= limit;
+        });
       });
-      filtered.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+      filtered.sort((a, b) => {
+        const aDate = getNearestDeadline(a.events ?? []);
+        const bDate = getNearestDeadline(b.events ?? []);
+        if (!aDate && !bDate) return 0;
+        if (!aDate) return 1;
+        if (!bDate) return -1;
+        return aDate.getTime() - bDate.getTime();
+      });
       return filtered;
     }
 
@@ -519,7 +572,11 @@ export default function Companies() {
                     </div>
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded">応募締切日</span>
-                      <span className="text-gray-600 text-sm">{company.deadline}</span>
+                      <span className="text-gray-600 text-sm">
+                        {company.events && company.events.length > 0
+                          ? company.events[0].deadline ?? company.deadline
+                          : company.deadline}
+                      </span>
                       {company.isUrgent && (
                         <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
                           🔥 もうすぐ締切
@@ -543,8 +600,8 @@ export default function Companies() {
                         <img src={company.premiumImage} alt={company.name} className="w-full h-40 object-cover" />
                       </div>
                     )}
-                    {company.eventTitle && (
-                      <h3 className="text-orange-500 font-medium mb-2">{company.eventTitle}</h3>
+                    {company.events && company.events.length > 0 && (
+                      <h3 className="text-orange-500 font-medium mb-2">{company.events[0].title}</h3>
                     )}
                     {company.tags && (
                       <div className="flex gap-2 mb-2 flex-wrap">
@@ -563,25 +620,25 @@ export default function Companies() {
                       </div>
                     )}
                     <div className="text-sm text-gray-600 space-y-1">
-                      {company.eventPeriod && (
+                      {company.events && company.events.length > 0 && company.events[0].area && (
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} />
+                          <span>開催エリア</span>
+                          <span className="ml-1">{company.events[0].area}</span>
+                        </div>
+                      )}
+                      {company.events && company.events.length > 0 && company.events[0].duration && (
+                        <div className="flex items-center gap-2">
+                          <Clock size={14} />
+                          <span>実施期間</span>
+                          <span className="ml-1">{company.events[0].duration}</span>
+                        </div>
+                      )}
+                      {(!company.events || company.events.length === 0) && company.eventPeriod && (
                         <div className="flex items-center gap-2">
                           <Calendar size={14} />
                           <span>開催時期</span>
                           <span className="ml-1">{company.eventPeriod}</span>
-                        </div>
-                      )}
-                      {company.eventArea && (
-                        <div className="flex items-center gap-2">
-                          <MapPin size={14} />
-                          <span>開催エリア</span>
-                          <span className="ml-1">{company.eventArea}</span>
-                        </div>
-                      )}
-                      {company.eventDuration && (
-                        <div className="flex items-center gap-2">
-                          <Clock size={14} />
-                          <span>実施期間</span>
-                          <span className="ml-1">{company.eventDuration}</span>
                         </div>
                       )}
                     </div>
@@ -595,7 +652,11 @@ export default function Companies() {
                       </span>
                       <div className="flex items-center gap-1 text-orange-400 text-xs font-semibold">
                         <AlertTriangle size={14} />
-                        <span>応募締切日：{company.deadline}</span>
+                        <span>
+                          応募締切日：{company.events && company.events.length > 0
+                            ? company.events[0].deadline ?? company.deadline
+                            : company.deadline}
+                        </span>
                         {company.deadlineClosed && <span className="ml-1">締切済み</span>}
                       </div>
                     </div>
