@@ -9,6 +9,7 @@ import {
   Tag,
   Shield,
   ArrowLeft,
+  CalendarDays,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -20,6 +21,7 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { label: 'ダッシュボード', path: '/admin', icon: <LayoutDashboard size={18} /> },
   { label: '企業管理', path: '/admin/companies', icon: <Building2 size={18} /> },
+  { label: 'イベント管理', path: '/admin/events', icon: <CalendarDays size={18} /> },
   { label: 'マガジン管理', path: '/admin/magazine', icon: <BookOpen size={18} /> },
   { label: 'ユーザー管理', path: '/admin/users', icon: <Users size={18} /> },
   { label: 'お知らせ管理', path: '/admin/notifications', icon: <Bell size={18} /> },
