@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, AlertTriangle, CalendarDays } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Pencil, Trash2, X, AlertTriangle, CalendarDays, Upload, CheckCircle } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { supabase } from '../../lib/supabase';
 
@@ -369,6 +369,280 @@ function DeleteModal({
   );
 }
 
+type CsvEventRow = {
+  companyName: string;
+  title: string;
+  event_type: string;
+  date: string;
+  time: string;
+  deadline: string;
+  area: string;
+  duration: string;
+  memo: string;
+  company_id: string | null;
+};
+
+type EventImportResult = { success: number; unmatched: number; errors: number } | null;
+
+function splitCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let cur = '';
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+      else { inQuote = !inQuote; }
+    } else if (ch === ',' && !inQuote) {
+      result.push(cur.trim());
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const buf = e.target?.result as ArrayBuffer;
+      try {
+        const utf8 = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+        resolve(utf8);
+      } catch {
+        const sjis = new TextDecoder('shift_jis').decode(buf);
+        resolve(sjis);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parseCsvEvents(text: string, companies: Company[]): CsvEventRow[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+  const headers = splitCsvLine(lines[0]);
+  const companyMap = new Map(companies.map((c) => [c.name, c.id]));
+
+  return lines.slice(1).map((line) => {
+    const vals = splitCsvLine(line);
+    const raw: Record<string, string> = {};
+    headers.forEach((h, i) => { raw[h] = vals[i] ?? ''; });
+    const companyName = raw['企業名'] ?? raw['company_name'] ?? '';
+    return {
+      companyName,
+      title: raw['タイトル'] ?? raw['title'] ?? '',
+      event_type: raw['種別'] ?? raw['type'] ?? 'インターン',
+      date: raw['日付'] ?? raw['date'] ?? '',
+      time: raw['時間'] ?? raw['time'] ?? '',
+      deadline: raw['締切'] ?? raw['deadline'] ?? '',
+      area: raw['エリア'] ?? raw['area'] ?? '',
+      duration: raw['期間'] ?? raw['duration'] ?? '',
+      memo: raw['メモ'] ?? raw['memo'] ?? '',
+      company_id: companyMap.get(companyName) ?? null,
+    };
+  }).filter((r) => r.companyName.trim() || r.title.trim());
+}
+
+function EventCsvImportModal({
+  companies,
+  onClose,
+  onDone,
+}: {
+  companies: Company[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [rows, setRows] = useState<CsvEventRow[]>([]);
+  const [fileName, setFileName] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<EventImportResult>(null);
+  const [parseError, setParseError] = useState('');
+
+  const handleFile = useCallback(async (file: File) => {
+    setParseError('');
+    setRows([]);
+    setResult(null);
+    setFileName(file.name);
+    const text = await readFileAsText(file);
+    const parsed = parseCsvEvents(text, companies);
+    if (parsed.length === 0) {
+      setParseError('有効な行が見つかりませんでした。CSVの形式を確認してください。');
+      return;
+    }
+    setRows(parsed);
+  }, [companies]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+    e.target.value = '';
+  };
+
+  const validRows = rows.filter((r) => r.company_id && r.title.trim());
+  const invalidRows = rows.filter((r) => !r.company_id || !r.title.trim());
+  const previewRows = rows.slice(0, 5);
+
+  const handleImport = async () => {
+    setImporting(true);
+    let success = 0;
+    let unmatched = 0;
+    let errors = 0;
+
+    for (const row of rows) {
+      if (!row.company_id || !row.title.trim()) {
+        unmatched++;
+        continue;
+      }
+      const payload = {
+        company_id: row.company_id,
+        title: row.title.trim(),
+        event_type: row.event_type || 'インターン',
+        date: row.date || null,
+        time: row.time || null,
+        deadline: row.deadline || null,
+        area: row.area || null,
+        duration: row.duration || null,
+        memo: row.memo || null,
+      };
+      const { error } = await supabase.from('master_events').insert(payload);
+      if (error) errors++;
+      else success++;
+    }
+
+    setImporting(false);
+    setResult({ success, unmatched, errors });
+    onDone();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+          <h2 className="text-lg font-bold text-gray-800">CSVインポート（イベント）</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5 overflow-y-auto">
+          {result ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle size={20} className="text-green-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-green-800">インポート完了</p>
+                  <p className="text-sm text-green-700 mt-1">
+                    成功 {result.success} 件　企業不一致 {result.unmatched} 件　エラー {result.errors} 件
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <p className="text-sm text-gray-600 mb-3">
+                  UTF-8 / Shift_JIS 形式のCSVファイルを選択してください。1行目はヘッダー行として扱います。企業名は master_companies に登録済みの名前と完全一致している必要があります。
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 border border-orange-500 text-orange-500 rounded-lg text-sm hover:bg-orange-50 transition-colors"
+                  >
+                    <Upload size={15} />
+                    ファイルを選択
+                  </button>
+                  {fileName && <span className="text-sm text-gray-600">{fileName}</span>}
+                  <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
+                </div>
+                {parseError && (
+                  <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
+                    <AlertTriangle size={13} /> {parseError}
+                  </p>
+                )}
+              </div>
+
+              {rows.length > 0 && (
+                <>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">
+                      全 {rows.length} 件を読み込みました（最大5行プレビュー）　有効: {validRows.length} 件　企業不一致: {invalidRows.length} 件
+                    </p>
+                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-gray-50 border-b">
+                            {['企業名', 'タイトル', '種別', '日付', '締切', 'エリア', '期間'].map((h) => (
+                              <th key={h} className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {previewRows.map((r, i) => (
+                            <tr key={i} className={r.company_id ? 'hover:bg-gray-50' : 'bg-red-50'}>
+                              <td className="px-3 py-2 font-medium whitespace-nowrap">
+                                <span className={r.company_id ? 'text-gray-800' : 'text-red-600'}>
+                                  {r.companyName || '-'}
+                                  {!r.company_id && <span className="ml-1 text-red-400 text-xs">（不一致）</span>}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.title || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.event_type || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.date || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.deadline || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.area || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.duration || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {invalidRows.length > 0 && (
+                      <p className="mt-2 text-xs text-red-500 flex items-center gap-1">
+                        <AlertTriangle size={12} />
+                        赤くハイライトされた行はインポート対象から除外されます。
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={onClose}
+                      className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      onClick={handleImport}
+                      disabled={importing || validRows.length === 0}
+                      className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+                    >
+                      <Upload size={14} />
+                      {importing ? 'インポート中...' : `インポート実行（${validRows.length}件）`}
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const EVENT_TYPE_COLORS: Record<string, string> = {
   インターン: 'bg-blue-100 text-blue-700',
   本選考: 'bg-red-100 text-red-700',
@@ -383,6 +657,7 @@ export default function AdminEvents() {
   const [modal, setModal] = useState<ModalState>(null);
   const [filterCompany, setFilterCompany] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -425,13 +700,22 @@ export default function AdminEvents() {
             <h1 className="text-2xl font-bold text-gray-800">イベント管理</h1>
             <p className="text-sm text-gray-500 mt-1">掲載イベントの作成・管理</p>
           </div>
-          <button
-            onClick={() => setModal({ type: 'create' })}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors shadow-sm"
-          >
-            <Plus size={16} />
-            イベント追加
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCsvModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-orange-500 text-orange-500 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors"
+            >
+              <Upload size={16} />
+              CSVインポート
+            </button>
+            <button
+              onClick={() => setModal({ type: 'create' })}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors shadow-sm"
+            >
+              <Plus size={16} />
+              イベント追加
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
@@ -583,6 +867,14 @@ export default function AdminEvents() {
         <DeleteModal
           event={modal.event}
           onClose={() => setModal(null)}
+          onDone={loadData}
+        />
+      )}
+
+      {csvModalOpen && (
+        <EventCsvImportModal
+          companies={companies}
+          onClose={() => setCsvModalOpen(false)}
           onDone={loadData}
         />
       )}

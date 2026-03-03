@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { Search, Plus, Upload, Pencil, Trash2, X, ChevronUp, ChevronDown, PlusCircle, ArrowUp, ArrowDown } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { Search, Plus, Upload, Pencil, Trash2, X, ChevronUp, ChevronDown, PlusCircle, ArrowUp, ArrowDown, AlertTriangle, CheckCircle } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { supabase } from '../../lib/supabase';
 
@@ -467,6 +467,321 @@ function InternInfoEditor({
   );
 }
 
+type CsvCompanyRow = {
+  name: string;
+  industry: string;
+  location: string;
+  employees: string;
+  position: string;
+  founded_year: string;
+  capital: string;
+  revenue: string;
+  business_description: string;
+  company_url: string;
+  tags: string[];
+  _raw: Record<string, string>;
+};
+
+type DuplicatePolicy = 'overwrite' | 'skip';
+
+type ImportResult = { success: number; skipped: number; errors: number } | null;
+
+function parseCsvText(text: string): CsvCompanyRow[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+  const headers = splitCsvLine(lines[0]);
+  return lines.slice(1).map((line) => {
+    const vals = splitCsvLine(line);
+    const raw: Record<string, string> = {};
+    headers.forEach((h, i) => { raw[h] = vals[i] ?? ''; });
+    return {
+      name: raw['企業名'] ?? raw['name'] ?? '',
+      industry: raw['業種'] ?? raw['industry'] ?? '',
+      location: raw['本社所在地'] ?? raw['location'] ?? '',
+      employees: raw['従業員数'] ?? raw['employees'] ?? '',
+      position: raw['職種'] ?? raw['position'] ?? '',
+      founded_year: raw['設立年'] ?? raw['founded_year'] ?? '',
+      capital: raw['資本金'] ?? raw['capital'] ?? '',
+      revenue: raw['売上高'] ?? raw['revenue'] ?? '',
+      business_description: raw['事業内容'] ?? raw['business_description'] ?? '',
+      company_url: raw['企業HP'] ?? raw['company_url'] ?? '',
+      tags: (raw['タグ'] ?? raw['tags'] ?? '').split(',').map((t) => t.trim()).filter(Boolean),
+      _raw: raw,
+    };
+  }).filter((r) => r.name.trim());
+}
+
+function splitCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let cur = '';
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+      else { inQuote = !inQuote; }
+    } else if (ch === ',' && !inQuote) {
+      result.push(cur.trim());
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const buf = e.target?.result as ArrayBuffer;
+      try {
+        const utf8 = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+        resolve(utf8);
+      } catch {
+        const sjis = new TextDecoder('shift_jis').decode(buf);
+        resolve(sjis);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function CompanyCsvImportModal({
+  existingCompanies,
+  onClose,
+  onDone,
+}: {
+  existingCompanies: Company[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [rows, setRows] = useState<CsvCompanyRow[]>([]);
+  const [fileName, setFileName] = useState('');
+  const [duplicatePolicy, setDuplicatePolicy] = useState<DuplicatePolicy>('overwrite');
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<ImportResult>(null);
+  const [parseError, setParseError] = useState('');
+
+  const existingNames = existingCompanies.map((c) => c.name);
+
+  const handleFile = useCallback(async (file: File) => {
+    setParseError('');
+    setRows([]);
+    setResult(null);
+    setFileName(file.name);
+    const text = await readFileAsText(file);
+    const parsed = parseCsvText(text);
+    if (parsed.length === 0) {
+      setParseError('有効な行が見つかりませんでした。CSVの形式を確認してください。');
+      return;
+    }
+    setRows(parsed);
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+    e.target.value = '';
+  };
+
+  const duplicates = rows.filter((r) => existingNames.includes(r.name));
+
+  const handleImport = async () => {
+    setImporting(true);
+    let success = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    for (const row of rows) {
+      const isDuplicate = existingNames.includes(row.name);
+      if (isDuplicate && duplicatePolicy === 'skip') {
+        skipped++;
+        continue;
+      }
+      const payload = {
+        name: row.name,
+        industry: row.industry || null,
+        location: row.location || null,
+        employees: row.employees || null,
+        position: row.position || null,
+        founded_year: row.founded_year || null,
+        capital: row.capital || null,
+        revenue: row.revenue || null,
+        business_description: row.business_description || null,
+        company_url: row.company_url || null,
+        tags: row.tags.length > 0 ? row.tags : null,
+      };
+      if (isDuplicate && duplicatePolicy === 'overwrite') {
+        const { error } = await supabase
+          .from('master_companies')
+          .update(payload)
+          .eq('name', row.name);
+        if (error) errors++;
+        else success++;
+      } else {
+        const { error } = await supabase.from('master_companies').insert(payload);
+        if (error) errors++;
+        else success++;
+      }
+    }
+
+    setImporting(false);
+    setResult({ success, skipped, errors });
+    onDone();
+  };
+
+  const previewRows = rows.slice(0, 5);
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+          <h2 className="text-lg font-bold text-gray-800">CSVインポート（企業）</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5 overflow-y-auto">
+          {result ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle size={20} className="text-green-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-green-800">インポート完了</p>
+                  <p className="text-sm text-green-700 mt-1">
+                    成功 {result.success} 件　スキップ {result.skipped} 件　エラー {result.errors} 件
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <p className="text-sm text-gray-600 mb-3">
+                  UTF-8 / Shift_JIS 形式のCSVファイルを選択してください。1行目はヘッダー行として扱います。
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 border border-orange-500 text-orange-500 rounded-lg text-sm hover:bg-orange-50 transition-colors"
+                  >
+                    <Upload size={15} />
+                    ファイルを選択
+                  </button>
+                  {fileName && <span className="text-sm text-gray-600">{fileName}</span>}
+                  <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
+                </div>
+                {parseError && (
+                  <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
+                    <AlertTriangle size={13} /> {parseError}
+                  </p>
+                )}
+              </div>
+
+              {rows.length > 0 && (
+                <>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">
+                      全 {rows.length} 件を読み込みました（最大5行プレビュー）
+                    </p>
+                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-gray-50 border-b">
+                            {['企業名', '業種', '本社所在地', '従業員数', '職種', '企業HP', 'タグ'].map((h) => (
+                              <th key={h} className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {previewRows.map((r, i) => (
+                            <tr key={i} className="hover:bg-gray-50">
+                              <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap">{r.name}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.industry || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.location || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.employees || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.position || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 max-w-[120px] truncate">{r.company_url || '-'}</td>
+                              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{r.tags.join(', ') || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {duplicates.length > 0 && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-sm font-medium text-amber-800 mb-2 flex items-center gap-1.5">
+                        <AlertTriangle size={14} />
+                        {duplicates.length} 件の企業名が既に存在します
+                      </p>
+                      <p className="text-xs text-amber-700 mb-3">
+                        {duplicates.map((d) => d.name).join('、')}
+                      </p>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 text-sm text-amber-800 cursor-pointer">
+                          <input
+                            type="radio"
+                            value="overwrite"
+                            checked={duplicatePolicy === 'overwrite'}
+                            onChange={() => setDuplicatePolicy('overwrite')}
+                            className="accent-orange-500"
+                          />
+                          上書き
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-amber-800 cursor-pointer">
+                          <input
+                            type="radio"
+                            value="skip"
+                            checked={duplicatePolicy === 'skip'}
+                            onChange={() => setDuplicatePolicy('skip')}
+                            className="accent-orange-500"
+                          />
+                          スキップ
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={onClose}
+                      className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      onClick={handleImport}
+                      disabled={importing}
+                      className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+                    >
+                      <Upload size={14} />
+                      {importing ? 'インポート中...' : `インポート実行（${rows.length}件）`}
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -483,7 +798,7 @@ export default function AdminCompanies() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortAsc, setSortAsc] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
 
   async function fetchCompanies() {
     setLoading(true);
@@ -661,39 +976,6 @@ export default function AdminCompanies() {
     fetchCompanies();
   }
 
-  function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const text = ev.target?.result as string;
-      const lines = text.split('\n').filter((l) => l.trim());
-      if (lines.length < 2) return;
-      const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
-      const rows = lines.slice(1).map((line) => {
-        const vals = line.split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
-        const obj: Record<string, string> = {};
-        headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
-        return obj;
-      });
-      const inserts = rows
-        .filter((r) => r['name'])
-        .map((r) => ({
-          name: r['name'],
-          industry: r['industry'] || null,
-          employees: r['employees'] || null,
-          location: r['location'] || null,
-          position: r['position'] || null,
-        }));
-      if (inserts.length > 0) {
-        await supabase.from('master_companies').insert(inserts);
-        fetchCompanies();
-      }
-    };
-    reader.readAsText(file, 'UTF-8');
-    e.target.value = '';
-  }
-
   function SortIcon({ col }: { col: SortKey }) {
     if (sortKey !== col) return <ChevronUp size={14} className="text-gray-300" />;
     return sortAsc
@@ -712,13 +994,12 @@ export default function AdminCompanies() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => csvInputRef.current?.click()}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            onClick={() => setCsvModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-orange-500 rounded-lg text-sm text-orange-500 bg-white hover:bg-orange-50 transition-colors"
           >
             <Upload size={16} />
             CSVインポート
           </button>
-          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
           <button
             onClick={openCreate}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white transition-colors"
@@ -1122,6 +1403,14 @@ export default function AdminCompanies() {
             </div>
           </div>
         </div>
+      )}
+
+      {csvModalOpen && (
+        <CompanyCsvImportModal
+          existingCompanies={companies}
+          onClose={() => setCsvModalOpen(false)}
+          onDone={fetchCompanies}
+        />
       )}
     </AdminLayout>
   );
