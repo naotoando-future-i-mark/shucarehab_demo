@@ -431,6 +431,10 @@ export default function AdminUsers() {
       const profiles: UserProfile[] = profilesRes.data ?? [];
       const activeBans: UserBan[] = bansRes.data ?? [];
 
+      const { data: authData } = await supabase.rpc('get_user_emails');
+
+      const authMap = new Map(authData?.map((a: { user_id: string; email: string; last_sign_in_at: string | null }) => [a.user_id, a]) ?? []);
+
       const activeBanMap = new Map<string, UserBan>();
       activeBans.forEach((ban) => activeBanMap.set(ban.user_id, ban));
 
@@ -438,8 +442,8 @@ export default function AdminUsers() {
         const activeBan = activeBanMap.get(p.user_id) ?? null;
         return {
           ...p,
-          email: null,
-          last_login: null,
+          email: authMap.get(p.user_id)?.email ?? null,
+          last_login: authMap.get(p.user_id)?.last_sign_in_at ?? null,
           isBanned: !!activeBan,
           activeBan,
         };
