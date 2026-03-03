@@ -147,6 +147,7 @@ function AppInner() {
     currentPath === '/profile-setup' ||
     currentPath === '/calendar' ||
     currentPath === '/notifications' ||
+    currentPath === '/notes' ||
     isAdminPath;
 
   return (
